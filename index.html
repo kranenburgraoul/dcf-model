@@ -419,6 +419,13 @@ header {
 .az-kills { display:flex; flex-direction:column; gap:5px; margin-bottom:20px; }
 .az-kill { display:flex; gap:8px; font-size:11.5px; color:rgba(239,68,68,0.75); line-height:1.45; }
 .az-kill-icon { flex-shrink:0; font-size:10px; margin-top:2px; }
+.az-score-block { margin-bottom:16px; }
+.az-score-track { height:6px; border-radius:3px; background:linear-gradient(90deg,#ef4444 0%,#f59e0b 45%,#22c55e 80%); position:relative; margin-bottom:6px; }
+.az-score-needle { position:absolute; top:50%; transform:translate(-50%,-50%); width:12px; height:12px; border-radius:50%; background:#fff; border:2px solid var(--bg); box-shadow:0 0 6px rgba(0,0,0,0.5); }
+.az-score-zones { display:flex; justify-content:space-between; margin-bottom:8px; }
+.az-score-zone { font-family:var(--mono); font-size:9px; color:var(--text-3); letter-spacing:.08em; }
+.az-score-verdict { font-size:12px; color:var(--text-2); line-height:1.6; padding:10px 12px; background:var(--s2); border-radius:var(--r); border:1px solid var(--border); }
+.az-mkt-sub { font-size:8px; color:var(--text-3); letter-spacing:.04em; margin-top:1px; }
 .az-result-footer { padding:16px 24px; border-top:1px solid var(--border); }
 
 /* Animations */
@@ -1101,36 +1108,134 @@ const HORIZONS = ['3–6 months','6–12 months','12–18 months','18–24 month
 function hsh(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h)+s.charCodeAt(i);return Math.abs(h)}
 function hRange(seed,min,max){return min+(seed%(max-min+1))}
 
-function mkRationale(persona,ticker,info,confidence,verdict){
-  const {sector,pe,margin,growth,beta}=info
-  const T={
-    buffett:{
-      BUY:  [pe&&pe<22?`Trading at ${pe}x — reasonable for the quality of this franchise.`:null, margin>.25?`${Math.round(margin*100)}% margins signal a genuine moat. Exactly the kind of business I want to own forever.`:null, sector==='consumer'?`Durable consumer brand with real pricing power. I've been buying businesses like this for 60 years.`:null, `Quality at a fair price. I'll hold this for decades if the economics remain intact.`].filter(Boolean)[0],
-      HOLD: [pe&&pe>35?`Quality franchise, but ${pe}x demands perfection. I prefer to wait.`:null, `I like the business, but the price already reflects the optimistic scenario.`].filter(Boolean)[0],
-      PASS: [sector==='crypto'?`Speculation dressed as investment. I don't understand it, and I don't need to.`:null, growth<0?`Revenue is declining. I want businesses moving forward, not backward.`:null, `I can't see the economics clearly enough ten years from now.`].filter(Boolean)[0],
+function mkRationale(persona, ticker, info, confidence, verdict) {
+  const {sector, beta} = info
+  const pe     = info.pe     != null ? +info.pe     : null
+  const margin = info.margin != null ? +info.margin : 0
+  const growth = info.growth != null ? +info.growth : 0
+  const b      = beta        != null ? +beta        : 1.0
+
+  const peFmt   = pe     != null ? `${pe.toFixed(1)}x K/W` : null
+  const margFmt = `${Math.round(margin * 100)}% nettomarge`
+  const growFmt = `${growth >= 0 ? '+' : ''}${Math.round(growth * 100)}% omzetgroei`
+  const betaFmt = `beta ${b.toFixed(2)}`
+
+  const T = {
+    buffett: {
+      BUY: [
+        pe != null && pe < 22
+          ? `Bij ${peFmt} betaal je een eerlijke prijs voor een franchise van hoge kwaliteit — dat is precies de 'margin of safety' die ik zoek.`
+          : pe != null && pe < 35
+          ? `${peFmt} is redelijk voor een bedrijf met ${margFmt}. Niet goedkoop, maar ook niet te duur voor wat je krijgt.`
+          : `De prijs is acceptabel gegeven de kwaliteit van de onderneming.`,
+        margin > 0.25
+          ? `Een ${margFmt} is het bewijs van een echte concurrentiepositie — dit bedrijf hoeft niet op prijs te concurreren.`
+          : margin > 0.12
+          ? `De ${margFmt} is solide. Niet uitzonderlijk, maar consistent genoeg om mij gerust te stellen.`
+          : `De marges verdienen aandacht, maar de rest van het plaatje compenseert.`,
+        growth > 0.08
+          ? `${growFmt} terwijl de marges standhouden — dat is de compounding die ik zoek.`
+          : `Groei is bescheiden, maar voor een kwaliteitsfranchise is dat acceptabel.`,
+      ].join(' '),
+      HOLD: [
+        pe != null && pe > 40
+          ? `Bij ${peFmt} heeft de markt al veel optimisme ingeprijsd. Ik heb meer veiligheidsmarge nodig voordat ik instap.`
+          : `Het bedrijf is goed — ${margFmt} spreekt voor zich — maar de huidige prijs laat weinig ruimte voor fouten.`,
+        `Ik wacht liever op een betere instapprijs dan te veel te betalen voor zelfs het beste bedrijf.`,
+      ].join(' '),
+      PASS: [
+        sector === 'crypto'
+          ? `Speculatie vermomd als investering. Ik kan de intrinsieke waarde niet berekenen en doe dat liever ook niet.`
+          : growth < 0
+          ? `Omzet daalt met ${Math.abs(Math.round(growth * 100))}% — ik wil bedrijven die vooruit gaan, niet achteruit.`
+          : pe != null && pe > 60
+          ? `Bij ${peFmt} moet alles de komende tien jaar perfect gaan. Die zekerheid heb ik niet.`
+          : `Ik zie de economie van dit bedrijf over tien jaar niet helder genoeg.`,
+        `De ${margFmt} geeft mij onvoldoende vertrouwen om dit door een recessie heen te houden.`,
+      ].join(' '),
     },
-    munger:{
-      BUY:  [sector==='consumer'?`Best businesses to own are the ones people use every day without thinking.`:null, margin>.30?`${Math.round(margin*100)}% margins means something others can't replicate.`:null, `Invert, always invert — the list of things that could go wrong is short.`].filter(Boolean)[0],
-      HOLD: `The business is fine. The price is not obviously cheap.`,
-      PASS: [sector==='crypto'?`Rat poison. No cash flows, no intrinsic value. Entirely speculative.`:null, `Too complicated, not cheap enough.`].filter(Boolean)[0],
+
+    munger: {
+      BUY: [
+        margin > 0.30
+          ? `${margFmt} — dat is geen geluk, dat is een structureel voordeel dat concurrenten niet zomaar kopiëren.`
+          : `Inverteer de vraag: wat moet er fout gaan voor een slecht resultaat? De lijst is kort.`,
+        growth > 0.10
+          ? `${growFmt} met behoud van marges — de meeste bedrijven ruilen het een voor het ander.`
+          : sector === 'consumer'
+          ? `Mensen kopen dit product elke dag zonder na te denken. Dat is het beste bedrijfsmodel dat bestaat.`
+          : `Simpel bedrijf, begrijpelijke economie, eerlijk management. Meer heb ik niet nodig.`,
+      ].join(' '),
+      HOLD: `De kwaliteit is aanwezig — ${margFmt} bevestigt dat. Maar bij de huidige waardering (${peFmt ?? 'onduidelijk'}) krijg ik niet genoeg voor mijn geduld. Ik wacht.`,
+      PASS: sector === 'crypto'
+        ? `Rattenvergif. Geen cashflows, geen intrinsieke waarde, volledig afhankelijk van de volgende koper. Ik pas.`
+        : pe != null && pe > 55
+        ? `${peFmt} vereist perfectie. Bedrijven leveren zelden perfectie. De wiskunde werkt niet.`
+        : `Te ingewikkeld of te duur. Ik zit liever in cash dan dit risico te nemen.`,
     },
-    ackman:{
-      BUY:  [growth>.20?`${Math.round(growth*100)}% revenue growth with expanding margins — exactly the compounding machine I look for.`:null, `Clear thesis, understandable business, identifiable catalyst. I'd size this at 10%+ of the book.`].filter(Boolean)[0],
-      HOLD: `The story is right but I need a cleaner entry point.`,
-      PASS: [sector==='crypto'?`Too binary and too dependent on sentiment. Not my style.`:null, `No clear catalyst, no obvious path to value creation.`].filter(Boolean)[0],
+
+    ackman: {
+      BUY: [
+        growth > 0.15
+          ? `${growFmt} gecombineerd met ${margFmt} — dit is precies de compoundingmachine die ik zoek.`
+          : `Duidelijke thesis, begrijpelijk bedrijfsmodel, een identificeerbare katalysator voor herwaardering.`,
+        pe != null
+          ? pe < 30
+            ? `Bij ${peFmt} is de waardering niet veeleisend voor een bedrijf met deze kenmerken.`
+            : `${peFmt} vereist uitvoering — maar ik heb vertrouwen in het management.`
+          : `De waardering is acceptabel gegeven het groeiprofiel.`,
+        `Ik zou dit zwaar wegen in de portefeuille. Als de thesis helder is, bet je groot.`,
+      ].join(' '),
+      HOLD: `Het verhaal klopt, maar de setup is nog niet schoon genoeg. ${peFmt ? `Bij ${peFmt} ` : ''}heb ik een betere instap of een duidelijkere katalysator nodig voor een volledige positie.`,
+      PASS: sector === 'crypto'
+        ? `Te binair en volledig sentimentgedreven. Ik kan geen thesis bouwen rondom iets zonder fundamenteel anker.`
+        : growth < 0
+        ? `Negatieve omzetgroei vernietigt de thesis. Ik heb een groeiend bedrijf nodig, geen krimpend.`
+        : `Geen duidelijke katalysator, geen pad naar waardecreatie. Pas.`,
     },
-    cohen:{
-      BUY:  [beta&&beta>1.5?`High beta (${beta}x) means maximum leverage to the upside when the trend is right — and the trend is right.`:null, growth>.15?`Revenue momentum at ${Math.round(growth*100)}% drives price action. Earnings revisions skewing higher.`:null, `Technical setup is clean. Volume profile confirms institutional accumulation.`].filter(Boolean)[0],
-      HOLD: [beta&&beta<1?`Low beta, low momentum. Not the kind of name that drives alpha.`:null, `Near-term resistance overhead. Waiting for a breakout.`].filter(Boolean)[0],
-      PASS: [growth<0?`Negative revenue growth is a momentum killer.`:null, `No momentum, no near-term catalyst.`].filter(Boolean)[0],
+
+    cohen: {
+      BUY: [
+        b > 1.5
+          ? `Hoge ${betaFmt} geeft maximale hefboom naar boven als de trend bevestigt — en de trend is nu je vriend.`
+          : `De technische setup is constructief en het fundamentele momentum bouwt op.`,
+        growth > 0.10
+          ? `${growFmt} drijft winstherzieningen omhoog, wat institutionele flows aantrekt, wat de koers beweegt. Dat is het draaiboek.`
+          : `Het volume profiel bevestigt accumulatie door grote partijen.`,
+        `Ik zit erin.`,
+      ].join(' '),
+      HOLD: b < 1.0
+        ? `Lage ${betaFmt} — deze naam beweegt niet genoeg om de alpha te genereren die mijn strategie vereist. Ik wacht op momentum.`
+        : `Het momentum is neutraal. Geen duidelijk directioneel signaal. Ik wacht op een breakout met volume.`,
+      PASS: growth < 0
+        ? `Negatief omzetmomentum is een dealbreaker. Winstherzieningen gaan omlaag, wat institutioneel verkopen uitlokt. Dat vermijd ik.`
+        : b < 0.7
+        ? `Te lage ${betaFmt}. Dit kan de rendementen niet genereren die mijn strategie vereist.`
+        : `Geen momentum, geen katalysator, geen trade. Ik speel alleen als de odds in mijn voordeel zijn.`,
     },
-    dalio:{
-      BUY:  [sector==='ai'?`AI infrastructure buildout is a generational macro theme.`:null, sector==='health'?`Demographics drive healthcare spend for decades — structural, not cyclical.`:null, `Macro tailwinds align. In a balanced all-weather portfolio, this earns a position.`].filter(Boolean)[0],
-      HOLD: `Macro-neutral. Not a headwind, not a tailwind. Sizing accordingly.`,
-      PASS: [sector==='crypto'?`Speculative asset, not a store of value in a risk-off environment.`:null, `Macro headwinds outweigh the micro opportunity here.`].filter(Boolean)[0],
+
+    dalio: {
+      BUY: [
+        sector === 'ai'
+          ? `De AI-infrastructuuropbouw is een generationeel macro-thema — seculier, niet cyclisch. Dit verdient een plek in een all-weather portefeuille.`
+          : sector === 'health'
+          ? `Demografie is een onomkeerbare macrokracht. Zorgvraag groeit structureel tientallen jaren, ongeacht de economische cyclus.`
+          : sector === 'energy'
+          ? `De energietransitie creëert een vraag-aanbodonbalans die jaren duurt om op te lossen. Grondstoffen presteren goed in inflatoire regimes.`
+          : `Het macro-omgeving begunstig deze sector. De positionering sluit aan bij het all-weather template.`,
+        `Bij ${betaFmt} biedt dit ${b < 1 ? 'defensieve exposure met bescheiden neerwaartse risico' : 'betekenisvolle upside in een risicogebalanceerd kader'}.`,
+      ].join(' '),
+      HOLD: `Macro-neutrale positie. De fundamentals pleiten niet sterk voor of tegen — ${betaFmt} houdt het in de gebalanceerde bucket. Geen reden om bij te kopen of te verkopen.`,
+      PASS: sector === 'crypto'
+        ? `Speculatieve assets presteren slecht in risk-off omgevingen. In een gediversifieerde, risicogebalanceerde portefeuille verdient dit geen allocatie.`
+        : b > 2.5
+        ? `${betaFmt} is te hoog voor het all-weather kader. Dit zou de portefeuille destabiliseren in een neergang.`
+        : `Macro-tegenwind overwint de micro-kans. Het template zegt pas.`,
     },
   }
-  return ((T[persona]||{})[verdict])||`Analysis complete. Conviction at ${confidence}.`
+
+  const personaT = T[persona] || {}
+  return personaT[verdict] || `Analyse compleet. Convictiescore: ${confidence}/100.`
 }
 
 function verdictFromConfidence(c,persona,sector){
@@ -1393,16 +1498,16 @@ function showAnalyzeResult(analysis, realInfo){
           <span class="az-live-badge">LIVE · ${realInfo.sources.join(' + ')}</span>
         </div>
         <div class="az-mkt-grid">
-          ${realInfo.price    != null ? `<div class="az-mkt-cell"><div class="az-mkt-k">Price</div><div class="az-mkt-v">$${realInfo.price.toFixed(2)}</div></div>` : ''}
-          ${realInfo.changeP  ? `<div class="az-mkt-cell"><div class="az-mkt-k">1D Change</div><div class="az-mkt-v" style="color:${chgColor};">${realInfo.changeP}</div></div>` : ''}
-          ${realInfo.mktCap   ? `<div class="az-mkt-cell"><div class="az-mkt-k">Mkt Cap</div><div class="az-mkt-v">${fmtMktCap(realInfo.mktCap)}</div></div>` : ''}
-          ${realInfo.pe       != null ? `<div class="az-mkt-cell"><div class="az-mkt-k">P/E</div><div class="az-mkt-v">${realInfo.pe.toFixed(1)}x</div></div>` : ''}
+          ${realInfo.price   != null ? `<div class="az-mkt-cell"><div class="az-mkt-k">Koers</div><div class="az-mkt-v">$${realInfo.price.toFixed(2)}</div><div class="az-mkt-sub">actuele aandelenprijs</div></div>` : ''}
+          ${realInfo.changeP ? `<div class="az-mkt-cell"><div class="az-mkt-k">Vandaag</div><div class="az-mkt-v" style="color:${chgColor};">${realInfo.changeP}</div><div class="az-mkt-sub">wijziging vs gisteren</div></div>` : ''}
+          ${realInfo.mktCap  ? `<div class="az-mkt-cell"><div class="az-mkt-k">Marktwaarde</div><div class="az-mkt-v">${fmtMktCap(realInfo.mktCap)}</div><div class="az-mkt-sub">totale beurswaarde</div></div>` : ''}
+          ${realInfo.pe      != null ? `<div class="az-mkt-cell"><div class="az-mkt-k">K/W</div><div class="az-mkt-v">${realInfo.pe.toFixed(1)}x</div><div class="az-mkt-sub">prijs per €1 winst</div></div>` : ''}
         </div>
         <div class="az-mkt-grid" style="margin-top:8px;">
-          ${realInfo.eps      != null ? `<div class="az-mkt-cell"><div class="az-mkt-k">EPS</div><div class="az-mkt-v">$${realInfo.eps.toFixed(2)}</div></div>` : ''}
-          ${realInfo.margin   ? `<div class="az-mkt-cell"><div class="az-mkt-k">Net Margin</div><div class="az-mkt-v">${Math.round(realInfo.margin*100)}%</div></div>` : ''}
-          ${realInfo.growth   ? `<div class="az-mkt-cell"><div class="az-mkt-k">Rev Growth</div><div class="az-mkt-v" style="color:${realInfo.growth>0?'#4ade80':'#f87171'};">${realInfo.growth>0?'+':''}${Math.round(realInfo.growth*100)}%</div></div>` : ''}
-          ${realInfo.beta     ? `<div class="az-mkt-cell"><div class="az-mkt-k">Beta</div><div class="az-mkt-v">${realInfo.beta.toFixed(2)}</div></div>` : ''}
+          ${realInfo.eps    != null ? `<div class="az-mkt-cell"><div class="az-mkt-k">EPS</div><div class="az-mkt-v">$${realInfo.eps.toFixed(2)}</div><div class="az-mkt-sub">winst per aandeel</div></div>` : ''}
+          ${realInfo.margin ? `<div class="az-mkt-cell"><div class="az-mkt-k">Nettomarge</div><div class="az-mkt-v">${Math.round(realInfo.margin*100)}%</div><div class="az-mkt-sub">winst na alle kosten</div></div>` : ''}
+          ${realInfo.growth ? `<div class="az-mkt-cell"><div class="az-mkt-k">Omzetgroei</div><div class="az-mkt-v" style="color:${realInfo.growth>0?'#4ade80':'#f87171'};">${realInfo.growth>0?'+':''}${Math.round(realInfo.growth*100)}%</div><div class="az-mkt-sub">kwartaal jaar-op-jaar</div></div>` : ''}
+          ${realInfo.beta   ? `<div class="az-mkt-cell"><div class="az-mkt-k">Beta</div><div class="az-mkt-v">${realInfo.beta.toFixed(2)}</div><div class="az-mkt-sub">beweeglijkheid vs markt</div></div>` : ''}
         </div>
         ${realInfo.analystTarget != null ? `
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
@@ -1443,7 +1548,31 @@ function showAnalyzeResult(analysis, realInfo){
       <div class="az-cio-lbl">CIO Summary</div>
       <div class="az-cio-text">${analysis.cioSummary}</div>
     </div>
-    <div class="az-section-lbl">Agent Analysis</div>
+    <div class="az-score-block">
+      <div class="az-section-lbl" style="margin-bottom:8px;">Wat betekent de score?</div>
+      <div class="az-score-track">
+        <div class="az-score-needle" style="left:${conv}%;"></div>
+      </div>
+      <div class="az-score-zones">
+        <span class="az-score-zone" style="color:#f87171;">0 — PASS</span>
+        <span class="az-score-zone" style="color:#fbbf24;">55 — HOLD</span>
+        <span class="az-score-zone" style="color:#4ade80;">75 — BUY</span>
+        <span class="az-score-zone">100</span>
+      </div>
+      <div class="az-score-verdict">
+        <strong style="color:${convColor};font-family:var(--mono);">${conv}/100</strong> —
+        ${conv >= 75
+          ? `Sterke consensus. Minstens 3 van de 5 agents zijn overtuigd van een positie. De CIO geeft groen licht.`
+          : conv >= 65
+          ? `Matige consensus. De meerderheid ziet kansen, maar er zijn twijfels. Kleine startpositie met ruimte om bij te kopen.`
+          : conv >= 55
+          ? `Gemengde signalen. Agents zijn verdeeld — het risico/rendement is niet overtuigend genoeg voor een volle positie.`
+          : conv >= 38
+          ? `Weinig overtuiging. Slechts een minderheid ziet kansen. De CIO adviseert te wachten op betere omstandigheden.`
+          : `Geen consensus. De meeste agents adviseren te passen. Onvoldoende onderbouwing voor een positie.`}
+      </div>
+    </div>
+    <div class="az-section-lbl">Agent-voor-agent analyse</div>
     ${agentHTML}
     <div style="margin-top:16px;"></div>
     ${catsHTML}
