@@ -1406,6 +1406,69 @@ td:last-child { border-right: none; }
 .btn-export:active { transform: scale(0.98); }
 .btn-export svg { width: 13px; height: 13px; flex-shrink: 0; }
 
+/* ─── Tesla Test Modal ────────────────────────────────────────────────── */
+.test-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+.test-overlay.open { display: flex; }
+.test-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.test-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+.test-modal-title { font-size:13px;font-weight:700;color:var(--red);letter-spacing:.4px;text-transform:uppercase;font-family:var(--font); }
+.test-close { background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;transition:color .15s,background .15s; }
+.test-close:hover { color:var(--text);background:var(--border); }
+.test-body { padding:18px 22px 24px; }
+.test-desc { font-size:12px;color:var(--text-dim);margin-bottom:14px;line-height:1.6; }
+.test-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-family: var(--font);
+  gap: 12px;
+}
+.test-row.pass { background: rgba(0,208,132,.08); border: 1px solid rgba(0,208,132,.2); }
+.test-row.fail { background: rgba(255,68,68,.08); border: 1px solid rgba(255,68,68,.2); }
+.test-row.warn { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.2); }
+.test-name { color: var(--text-secondary); flex:1; }
+.test-vals { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-align:right; }
+.test-badge { font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:3px;white-space:nowrap; }
+.test-badge.pass { background:rgba(0,208,132,.2);color:var(--green); }
+.test-badge.fail { background:rgba(255,68,68,.2);color:var(--red); }
+.test-badge.warn { background:rgba(251,191,36,.2);color:var(--amber); }
+.test-summary { margin-top:14px;padding:10px 14px;border-radius:6px;font-size:12px;font-family:var(--font);font-weight:600; }
+.test-summary.all-pass { background:rgba(0,208,132,.1);color:var(--green);border:1px solid rgba(0,208,132,.25); }
+.test-summary.has-fail  { background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.25); }
+
 /* ─── Data Guide Modal ────────────────────────────────────────────────── */
 .guide-overlay {
   display: none;
@@ -2483,6 +2546,12 @@ td:last-child { border-right: none; }
         All monetary inputs in <strong>millions USD</strong> — per-share values and % as displayed · Enter assumptions below and click Calculate
       </span>
       <div class="export-group">
+        <button class="btn-export" onclick="runTeslaTest()" title="Fill Tesla test case and validate calculations" style="border-color:rgba(239,68,68,.4);color:var(--red)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Test: Tesla
+        </button>
         <button class="btn-export" onclick="openDataGuide()" title="What data do I need?">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -2674,7 +2743,11 @@ td:last-child { border-right: none; }
         </div>
         <div class="field">
           <label class="field-label" for="nwc">Change in NWC ($M)</label>
-          <input class="field-input" type="number" id="nwc" value="1200" placeholder="1200">
+          <input class="field-input" type="number" id="nwc" value="1000" placeholder="1000">
+          <select id="nwcSign" style="margin-top:5px;width:100%;background:var(--bg-input);border:1px solid var(--border-2);color:var(--text-secondary);font-family:var(--font);font-size:11px;padding:5px 8px;border-radius:var(--radius-sm);cursor:pointer">
+            <option value="outflow">Positive ΔNWC = cash outflow (subtract from FCF)</option>
+            <option value="inflow">Positive ΔNWC = cash inflow (add to FCF)</option>
+          </select>
         </div>
         <div class="field">
           <label class="field-label" for="ocf">Operating Cash Flow ($M)</label>
@@ -2733,7 +2806,12 @@ td:last-child { border-right: none; }
         </div>
         <div class="field">
           <label class="field-label" for="mve">Market Value of Equity ($M)</label>
-          <input class="field-input" type="number" id="mve" value="1376000">
+          <input class="field-input" type="number" id="mve" value="1375920">
+          <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+            <input type="checkbox" id="mveOverride" style="accent-color:var(--orange);cursor:pointer;width:13px;height:13px">
+            <label for="mveOverride" style="font-size:11px;color:var(--text-dim);cursor:pointer;user-select:none">Override manually</label>
+          </div>
+          <span class="field-hint">Auto = Share Price × Shares Outstanding</span>
         </div>
         <div class="field">
           <label class="field-label" for="mvd">Market Value of Debt ($M)</label>
@@ -3302,6 +3380,8 @@ td:last-child { border-right: none; }
           <tr><td class="cmp-label">EV / EBITDA</td><td><input class="cmp-input" type="number" id="cmpA_eveb" placeholder="20" step="0.1"></td></tr>
           <tr><td class="cmp-label">Dividend Yield (%)</td><td><input class="cmp-input" type="number" id="cmpA_div" placeholder="0" step="0.01"></td></tr>
           <tr><td class="cmp-label">Beta</td><td><input class="cmp-input" type="number" id="cmpA_beta" placeholder="1.2" step="0.01"></td></tr>
+          <tr><td class="cmp-label">Quality Score (/ 10)</td><td><input class="cmp-input" type="number" id="cmpA_quality" placeholder="7" min="0" max="10" step="0.1"></td></tr>
+          <tr><td class="cmp-label">Risk Score (/ 10)</td><td><input class="cmp-input" type="number" id="cmpA_risk" placeholder="5" min="0" max="10" step="0.1"><span style="font-size:10px;color:var(--text-muted);display:block;margin-top:2px">Lower = less risky</span></td></tr>
         </table>
       </div>
 
@@ -3325,6 +3405,8 @@ td:last-child { border-right: none; }
           <tr><td class="cmp-label">EV / EBITDA</td><td><input class="cmp-input" type="number" id="cmpB_eveb" placeholder="10" step="0.1"></td></tr>
           <tr><td class="cmp-label">Dividend Yield (%)</td><td><input class="cmp-input" type="number" id="cmpB_div" placeholder="1.2" step="0.01"></td></tr>
           <tr><td class="cmp-label">Beta</td><td><input class="cmp-input" type="number" id="cmpB_beta" placeholder="0.9" step="0.01"></td></tr>
+          <tr><td class="cmp-label">Quality Score (/ 10)</td><td><input class="cmp-input" type="number" id="cmpB_quality" placeholder="6" min="0" max="10" step="0.1"></td></tr>
+          <tr><td class="cmp-label">Risk Score (/ 10)</td><td><input class="cmp-input" type="number" id="cmpB_risk" placeholder="4" min="0" max="10" step="0.1"><span style="font-size:10px;color:var(--text-muted);display:block;margin-top:2px">Lower = less risky</span></td></tr>
         </table>
       </div>
 
@@ -3348,6 +3430,8 @@ td:last-child { border-right: none; }
           <tr><td class="cmp-label">EV / EBITDA</td><td><input class="cmp-input" type="number" id="cmpC_eveb" placeholder="50" step="0.1"></td></tr>
           <tr><td class="cmp-label">Dividend Yield (%)</td><td><input class="cmp-input" type="number" id="cmpC_div" placeholder="0" step="0.01"></td></tr>
           <tr><td class="cmp-label">Beta</td><td><input class="cmp-input" type="number" id="cmpC_beta" placeholder="1.8" step="0.01"></td></tr>
+          <tr><td class="cmp-label">Quality Score (/ 10)</td><td><input class="cmp-input" type="number" id="cmpC_quality" placeholder="3" min="0" max="10" step="0.1"></td></tr>
+          <tr><td class="cmp-label">Risk Score (/ 10)</td><td><input class="cmp-input" type="number" id="cmpC_risk" placeholder="8" min="0" max="10" step="0.1"><span style="font-size:10px;color:var(--text-muted);display:block;margin-top:2px">Lower = less risky</span></td></tr>
         </table>
       </div>
 
@@ -3763,6 +3847,7 @@ function generateForecast(baseRevenue, wacc, ov = {}) {
     : valOpt('ebitMarginTarget');
   const ebitMTarget = rawTarget !== null ? rawTarget / 100 : ebitM;
 
+  const nwcMult = document.getElementById('nwcSign')?.value === 'inflow' ? -1 : 1;
   const rows = [];
   let revenue = baseRevenue;
 
@@ -3779,7 +3864,7 @@ function generateForecast(baseRevenue, wacc, ov = {}) {
     const da    = revenue * daPct;
     const capex = revenue * capexPct;
     const dnwc  = revenue * nwcPct;
-    const fcf   = nopat + da - capex - dnwc;
+    const fcf   = nopat + da - capex - nwcMult * dnwc;
     const disc  = 1 / Math.pow(1 + wacc, yr);
     const pvFCF = fcf * disc;
     rows.push({ yr, revenue, g, ebit, nopat, da, capex, dnwc, fcf, disc, pvFCF });
@@ -4243,8 +4328,30 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Initialize all quality score sliders */
   MQ_FACTORS.forEach(f => updateMqSlider(f.id));
 
+  /* ── Auto-compute Market Value of Equity ── */
+  window.syncMVE = function syncMVE() {
+    if (document.getElementById('mveOverride')?.checked) return;
+    const price  = val('sharePrice');
+    const shares = val('sharesOut');
+    const mveEl  = document.getElementById('mve');
+    if (price > 0 && shares > 0 && mveEl) mveEl.value = Math.round(price * shares);
+  }
+  ['sharePrice', 'sharesOut'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', syncMVE);
+  });
+  document.getElementById('mveOverride')?.addEventListener('change', function() {
+    if (!this.checked) syncMVE();
+    document.getElementById('mve').readOnly = !this.checked;
+    document.getElementById('mve').style.opacity = this.checked ? '1' : '0.7';
+  });
+  // Init: make field read-only and run once
+  const mveEl = document.getElementById('mve');
+  if (mveEl) { mveEl.readOnly = true; mveEl.style.opacity = '0.7'; }
+  syncMVE();
+
   /* ── Auto-sync historical → forecast % ── */
-  function syncHistoricalPcts() {
+  window.syncHistoricalPcts = function syncHistoricalPcts() {
     const rev = val('revenue');
     if (rev <= 0) return;
     const fields = [
@@ -4510,20 +4617,22 @@ function calculateCompanyComparison() {
 
   const companies = prefixes.map(p => ({
     p,
-    name:   cmpStr(`cmp${p}_name`),
-    ticker: cmpStr(`cmp${p}_ticker`),
-    fv:     cmpNum(`cmp${p}_fv`),
-    price:  cmpNum(`cmp${p}_price`),
-    revGr:  cmpNum(`cmp${p}_revGr`),
-    fcfMgn: cmpNum(`cmp${p}_fcfMgn`),
-    roic:   cmpNum(`cmp${p}_roic`),
-    gm:     cmpNum(`cmp${p}_gm`),
-    nde:    cmpNum(`cmp${p}_nde`),
-    ic:     cmpNum(`cmp${p}_ic`),
-    pe:     cmpNum(`cmp${p}_pe`),
-    eveb:   cmpNum(`cmp${p}_eveb`),
-    div:    cmpNum(`cmp${p}_div`),
-    beta:   cmpNum(`cmp${p}_beta`),
+    name:    cmpStr(`cmp${p}_name`),
+    ticker:  cmpStr(`cmp${p}_ticker`),
+    fv:      cmpNum(`cmp${p}_fv`),
+    price:   cmpNum(`cmp${p}_price`),
+    revGr:   cmpNum(`cmp${p}_revGr`),
+    fcfMgn:  cmpNum(`cmp${p}_fcfMgn`),
+    roic:    cmpNum(`cmp${p}_roic`),
+    gm:      cmpNum(`cmp${p}_gm`),
+    nde:     cmpNum(`cmp${p}_nde`),
+    ic:      cmpNum(`cmp${p}_ic`),
+    pe:      cmpNum(`cmp${p}_pe`),
+    eveb:    cmpNum(`cmp${p}_eveb`),
+    div:     cmpNum(`cmp${p}_div`),
+    beta:    cmpNum(`cmp${p}_beta`),
+    quality: cmpNum(`cmp${p}_quality`),  // 0–10 explicit quality score
+    risk:    cmpNum(`cmp${p}_risk`),     // 0–10 explicit risk score (lower = less risky)
   }));
 
   function upside(c) {
@@ -4567,11 +4676,19 @@ function calculateCompanyComparison() {
   }
 
   /* Scoring — each dimension 0–100 */
-  function scoreUpside(u)   { return isNaN(u) ? 0 : Math.max(0, Math.min(100, u + 50)); }
-  function scoreQuality(c)  { return isNaN(c.fcfMgn) || isNaN(c.gm) ? 0 : Math.max(0, Math.min(100, (c.fcfMgn + c.gm) * 2)); }
-  function scoreROIC(c)     { return isNaN(c.roic) ? 0 : Math.max(0, Math.min(100, c.roic * 3)); }
-  function scoreBS(c)       { return isNaN(c.nde) || isNaN(c.ic) ? 0 : Math.max(0, Math.min(100, (-c.nde) + c.ic * 4)); }
-  function scoreRisk(c)     { return isNaN(c.beta) ? 50 : Math.max(0, Math.min(100, (2 - c.beta) * 50)); }
+  function scoreUpside(u)  { return isNaN(u) ? 0 : Math.max(0, Math.min(100, u + 50)); }
+  function scoreQuality(c) {
+    // Prefer explicit quality score (0–10 → 0–100); fall back to FCF+GM proxy
+    if (!isNaN(c.quality)) return Math.max(0, Math.min(100, c.quality * 10));
+    return isNaN(c.fcfMgn) || isNaN(c.gm) ? 0 : Math.max(0, Math.min(100, (c.fcfMgn + c.gm) * 2));
+  }
+  function scoreROIC(c)    { return isNaN(c.roic) ? 0 : Math.max(0, Math.min(100, c.roic * 3)); }
+  function scoreBS(c)      { return isNaN(c.nde) || isNaN(c.ic) ? 0 : Math.max(0, Math.min(100, (-c.nde) + c.ic * 4)); }
+  function scoreRisk(c)    {
+    // Prefer explicit risk score (0–10 → 0–100 inverted: lower risk → higher score)
+    if (!isNaN(c.risk)) return Math.max(0, Math.min(100, (10 - c.risk) * 10));
+    return isNaN(c.beta) ? 50 : Math.max(0, Math.min(100, (2 - c.beta) * 50));
+  }
 
   companies.forEach(c => {
     const u = upside(c);
@@ -5409,17 +5526,37 @@ function renderImportResults(mapping, pairs) {
 
 function fillDashboardInputs(mapping) {
   let applied = 0;
+  let capexConverted = false;
   for (const def of CSV_FIELD_DEFS) {
     if (!mapping[def.key]) continue;
     const el = document.getElementById(def.id);
     if (!el) continue;
     const raw = mapping[def.key].raw;
-    const v   = normalizeValue(raw, def.type);
+    let v = normalizeValue(raw, def.type);
     if (v === null) continue;
+    // CapEx must always be a positive cash outflow
+    if (def.key === 'capex' && v < 0) { v = Math.abs(v); capexConverted = true; }
     if (def.type === 'text') { el.value = v; }
     else { el.value = Number.isInteger(v) ? String(v) : v.toFixed(def.type==='percent'?2:4); }
+    // Trigger MVE auto-sync after sharePrice or sharesOut change
+    if (def.key === 'currentPrice' || def.key === 'shares') {
+      if (typeof syncMVE === 'function') syncMVE();
+    }
     applied++;
   }
+  // Show CapEx conversion notice if needed
+  const noticeId = 'csvCapexNote';
+  let note = document.getElementById(noticeId);
+  if (capexConverted) {
+    if (!note) {
+      note = document.createElement('div');
+      note.id = noticeId;
+      note.style.cssText = 'margin-top:8px;padding:7px 12px;background:rgba(249,115,22,0.08);border:1px solid var(--orange-dim);border-radius:6px;font-size:11px;color:var(--orange)';
+      document.getElementById('csvResultsWrap')?.appendChild(note);
+    }
+    note.textContent = '⚠ CAPEX was imported as a negative number and has been converted to a positive cash outflow for DCF calculations.';
+    note.style.display = '';
+  } else if (note) { note.style.display = 'none'; }
   return applied;
 }
 
@@ -5659,7 +5796,8 @@ function runValuation() {
   const capex = val('capex');
   const fcf1  = ocf - capex;
   const nopat = val('ebit') * (1 - val('taxRate') / 100);
-  const fcf2  = nopat + val('da') - capex - val('nwc');
+  const nwcMult2 = document.getElementById('nwcSign')?.value === 'inflow' ? -1 : 1;
+  const fcf2  = nopat + val('da') - capex - nwcMult2 * val('nwc');
   document.getElementById('histFCF1').textContent = formatCurrency(fcf1);
   document.getElementById('histFCF2').textContent = formatCurrency(fcf2);
 
@@ -5947,6 +6085,101 @@ function exportHTML() {
 }
 
 
+/* ─── Tesla Test Case ─────────────────────────────────────────────────── */
+function runTeslaTest() {
+  // 1) Fill all inputs
+  const vals = {
+    company:'Tesla', ticker:'TSLA', sharePrice:390, sharesOut:3528,
+    cash:44059, debt:8376, taxRate:21,
+    revenue:94827, ebit:4355, ocf:14747, capex:8527, da:5127, nwc:1000,
+    rfr:4.5, erp:5.5, beta:2.0, cod:5.5, mvd:8376,
+  };
+  Object.entries(vals).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  });
+  // Uncheck override, recompute MVE
+  const ovChk = document.getElementById('mveOverride');
+  if (ovChk) { ovChk.checked = false; }
+  const mveEl = document.getElementById('mve');
+  if (mveEl) { mveEl.readOnly = true; mveEl.style.opacity = '0.7'; }
+  if (typeof syncMVE === 'function') syncMVE();
+  else if (mveEl) mveEl.value = Math.round(390 * 3528);
+  if (typeof syncHistoricalPcts === 'function') syncHistoricalPcts();
+
+  // 2) Run checks
+  const mveActual  = parseFloat(document.getElementById('mve')?.value || 0);
+  const cashV      = 44059, debtV = 8376;
+  const netDebtAct = debtV - cashV;
+  const fcf1Act    = 14747 - 8527;
+  const { ke, wacc } = calculateWACC();
+  const keActPct   = ke * 100;
+  const waccActPct = wacc * 100;
+
+  const tol = (a, b, t) => Math.abs(a - b) <= t;
+  const checks = [
+    {
+      name: 'Market Value of Equity ($M)',
+      expected: 1375920,
+      actual: mveActual,
+      pass: tol(mveActual, 1375920, 1),
+      fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
+    },
+    {
+      name: 'Net Debt ($M)',
+      expected: -35683,
+      actual: netDebtAct,
+      pass: tol(netDebtAct, -35683, 1),
+      fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
+    },
+    {
+      name: 'FCF Method 1 — OCF − CapEx ($M)',
+      expected: 6220,
+      actual: fcf1Act,
+      pass: tol(fcf1Act, 6220, 1),
+      fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
+    },
+    {
+      name: 'Cost of Equity (%)',
+      expected: 15.5,
+      actual: keActPct,
+      pass: tol(keActPct, 15.5, 0.05),
+      fmt: v => v.toFixed(2) + '%',
+    },
+    {
+      name: 'WACC (%) — expect ≈15.4%',
+      expected: 15.4,
+      actual: waccActPct,
+      pass: tol(waccActPct, 15.4, 0.2),
+      fmt: v => v.toFixed(2) + '%',
+    },
+  ];
+
+  const passCount = checks.filter(c => c.pass).length;
+  const allPass   = passCount === checks.length;
+
+  // 3) Render modal
+  const rows = checks.map(c => `
+    <div class="test-row ${c.pass ? 'pass' : 'fail'}">
+      <span class="test-name">${c.name}</span>
+      <span class="test-vals">Expected: ${c.fmt(c.expected)} · Got: ${c.fmt(c.actual)}</span>
+      <span class="test-badge ${c.pass ? 'pass' : 'fail'}">${c.pass ? 'PASS' : 'FAIL'}</span>
+    </div>`).join('');
+
+  document.getElementById('testResultsBody').innerHTML = rows;
+  document.getElementById('testSummary').innerHTML =
+    `${passCount}/${checks.length} checks passed`;
+  document.getElementById('testSummary').className =
+    `test-summary ${allPass ? 'all-pass' : 'has-fail'}`;
+
+  document.getElementById('teslaTestOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeTeslaTest() {
+  document.getElementById('teslaTestOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
 /* ─── Data Guide ──────────────────────────────────────────────────────── */
 function openDataGuide() {
   document.getElementById('dataGuideOverlay').classList.add('open');
@@ -5971,6 +6204,24 @@ function copyAIPrompt() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGuide(); });
 </script>
 
+<!-- ─── Tesla Test Modal ─────────────────────────────────────────────── -->
+<div class="test-overlay" id="teslaTestOverlay" onclick="if(event.target===this)closeTeslaTest()">
+  <div class="test-modal" role="dialog" aria-modal="true">
+    <div class="test-modal-header">
+      <span class="test-modal-title">⚡ Tesla Test Case — Validation</span>
+      <button class="test-close" onclick="closeTeslaTest()" aria-label="Close">&times;</button>
+    </div>
+    <div class="test-body">
+      <div class="test-desc">
+        Dashboard filled with Tesla 2023 inputs. The checks below verify that key computed values are correct.
+        All inputs are now pre-loaded — click <strong>Calculate Valuation</strong> to run the full model.
+      </div>
+      <div id="testResultsBody"></div>
+      <div id="testSummary" class="test-summary"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ─── Data Guide Modal ─────────────────────────────────────────────── -->
 <div class="guide-overlay" id="dataGuideOverlay" onclick="if(event.target===this)closeDataGuide()">
   <div class="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
@@ -5991,13 +6242,16 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGui
         <table class="guide-table">
           <thead><tr><th>Field</th><th>What it is &amp; where to find it</th></tr></thead>
           <tbody>
-            <tr><td>Company Name</td><td>Full legal name of the company (e.g. Apple Inc.)</td></tr>
-            <tr><td>Ticker</td><td>Stock exchange symbol — e.g. AAPL, MSFT, AMZN</td></tr>
-            <tr><td>Current Stock Price</td><td>Today's share price. <span class="guide-where">Yahoo Finance → Quote</span></td></tr>
-            <tr><td>Shares Outstanding</td><td>Total diluted shares in millions. <span class="guide-where">Yahoo Finance → Statistics</span> or 10-K cover page.</td></tr>
-            <tr><td>Net Debt</td><td>Total debt minus cash &amp; equivalents (in M). <span class="guide-where">Balance sheet → Total Debt − Cash</span>. Can be negative (net cash).</td></tr>
+            <tr><td>Company Name</td><td>Full legal name of the company (e.g. Tesla, Inc.)</td></tr>
+            <tr><td>Ticker</td><td>Stock exchange symbol — e.g. TSLA, AAPL, MSFT</td></tr>
+            <tr><td>Current Share Price ($)</td><td>Today's share price in USD. <span class="guide-where">Yahoo Finance → Quote</span></td></tr>
+            <tr><td>Shares Outstanding (M)</td><td>Total diluted shares in millions. <span class="guide-where">Yahoo Finance → Statistics → Shares Outstanding</span> or 10-K cover page.</td></tr>
+            <tr><td>Cash &amp; Short-term Investments ($M)</td><td>Cash, equivalents, and short-term investments. <span class="guide-where">Balance sheet → Cash &amp; Cash Equivalents + Short-term Investments</span>.</td></tr>
+            <tr><td>Total Debt ($M)</td><td>All interest-bearing debt (short + long term). <span class="guide-where">Balance sheet → Total Debt (or Short-term Debt + Long-term Debt)</span>.</td></tr>
+            <tr><td>Corporate Tax Rate (%)</td><td>Effective tax rate. <span class="guide-where">Income statement → Income Tax / Pre-tax Income</span>. Typical 15–28%. Used across all sections.</td></tr>
           </tbody>
         </table>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;padding:6px 10px;background:var(--bg-input);border-radius:4px">Net Debt is calculated automatically: Total Debt − Cash &amp; Short-term Investments. Negative = net cash position.</div>
       </div>
 
       <!-- Historical Financials -->
@@ -6023,12 +6277,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGui
           <thead><tr><th>Field</th><th>What it is &amp; where to find it</th></tr></thead>
           <tbody>
             <tr><td>Risk-Free Rate (%)</td><td>Yield on 10-year US Treasury. <span class="guide-where">finance.yahoo.com → ^TNX</span> or FRED. Typical: 4–5%.</td></tr>
-            <tr><td>Beta</td><td>Stock's sensitivity to market moves. <span class="guide-where">Yahoo Finance → Statistics → Beta (5Y monthly)</span>. Market = 1.0.</td></tr>
-            <tr><td>Equity Risk Premium (%)</td><td>Extra return demanded over risk-free. Use Damodaran's current ERP estimate. Typical: 4.5–6%.</td></tr>
-            <tr><td>Credit Spread (%)</td><td>Extra yield the company pays on debt vs. Treasuries. <span class="guide-where">Moody's / S&amp;P rating tables</span>, or estimate from interest expense ÷ total debt − risk-free rate.</td></tr>
-            <tr><td>Debt Ratio (%)</td><td>Debt as % of total capital (Debt ÷ (Debt + Equity)). <span class="guide-where">Balance sheet → Total Debt ÷ (Total Debt + Market Cap)</span>.</td></tr>
+            <tr><td>Equity Risk Premium (%)</td><td>Extra return investors demand above the risk-free rate. Use Damodaran's current US ERP. Typical: 4.5–6%.</td></tr>
+            <tr><td>Beta (β)</td><td>Stock's sensitivity to the market (1.0 = market). <span class="guide-where">Yahoo Finance → Statistics → Beta (5Y monthly)</span>.</td></tr>
+            <tr><td>Pre-tax Cost of Debt (%)</td><td>Interest rate the company pays on its debt. Estimate: Interest Expense ÷ Total Debt, or look up the bond yield. <span class="guide-where">Macrotrends → Interest Expense ÷ Total Debt</span>.</td></tr>
+            <tr><td>Market Value of Equity ($M)</td><td>Auto-calculated: Share Price × Shares Outstanding (M). No need to enter manually — updates when you fill in Company Information.</td></tr>
+            <tr><td>Market Value of Debt ($M)</td><td>Book value of total debt is a common proxy. <span class="guide-where">Balance sheet → Total Debt</span>. Same as the "Total Debt" you entered above.</td></tr>
           </tbody>
         </table>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;padding:6px 10px;background:var(--bg-input);border-radius:4px">Formula: WACC = Ke × (E/V) + Kd×(1−t) × (D/V) · Ke = Risk-free rate + β × ERP · Kd(after-tax) = Pre-tax cost of debt × (1 − tax rate)</div>
       </div>
 
       <!-- Forecast -->
@@ -6074,29 +6330,33 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGui
 - Stock ticker and exchange
 - Current stock price (USD)
 - Diluted shares outstanding (M)
-- Net debt = Total Debt − Cash & Equivalents (M)
+- Cash & short-term investments (M)  ← enter separately, NOT as net debt
+- Total debt — all interest-bearing debt, short + long term (M)
+- Corporate tax rate / effective tax rate (%)
 
 --- INCOME STATEMENT (most recent full fiscal year) ---
 - Total Revenue (M)
 - EBIT / Operating Income (M)
 - Depreciation & Amortization (M)
-- Effective Tax Rate (%)
 
 --- CASH FLOW STATEMENT (most recent full fiscal year) ---
-- Capital Expenditures / CapEx (M, as a positive number)
-- Change in Net Working Capital (M, positive = cash outflow)
+- Operating Cash Flow (M)
+- Capital Expenditures / CapEx (M, as a positive number — do not use negative)
+- Change in Net Working Capital (M, positive = cash outflow / increase in NWC)
 
 --- WACC INPUTS ---
 - Current 10-year US Treasury yield / Risk-Free Rate (%)
 - 5-year monthly Beta vs. S&P 500
 - Equity Risk Premium — use Damodaran's current estimate for the US (%)
-- Estimated credit spread based on credit rating (%)
-- Debt ratio = Total Debt / (Total Debt + Market Cap) (%)
+- Pre-tax cost of debt = Interest Expense ÷ Total Debt, or bond yield (%)
+- Market value of debt ≈ Total Debt (M)  ← same as Total Debt above
+
+Note: Market Value of Equity is auto-calculated as Share Price × Shares Outstanding.
 
 --- FORECAST ASSUMPTIONS ---
 - Consensus analyst revenue growth estimate for next year, Year 1 (%)
 - Average consensus revenue growth estimate for years 2–5 (%)
-- Historical or forward EBIT margin estimate (%)
+- Current EBIT margin (%) and analyst target EBIT margin for year 10 (%)
 - Long-term terminal growth rate — typically GDP growth ~2–3% (%)
 
 Please format your response as a simple table with two columns: Field | Value. Include units in the value column.</textarea>
