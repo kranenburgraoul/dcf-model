@@ -2567,7 +2567,7 @@ td:last-child { border-right: none; }
             <option value="market">Market Data</option>
             <option value="manual">Manual Mapping</option>
           </select>
-          <button class="csv-btn-import" id="csvImportBtn" onclick="importCSVData()">Import CSV Data</button>
+          <button class="csv-btn-import" id="csvImportBtn" onclick="importCSVData()" title="Re-parse with selected import type">Re-Import</button>
         </div>
       </div>
 
@@ -4229,6 +4229,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!files.length) return;
       _csvFiles = files;
       renderCSVFileList();
+      importCSVData();
     });
   }
 
@@ -4237,6 +4238,7 @@ document.addEventListener('DOMContentLoaded', () => {
       _csvFiles = Array.from(fileInput.files);
       renderCSVFileList();
       fileInput.value = '';
+      importCSVData();
     });
   }
 });
@@ -5340,8 +5342,8 @@ function renderImportResults(mapping, pairs) {
     <table class="csv-summary-table"><thead><tr><th>Field</th><th>Value</th><th>Confidence</th></tr></thead>
     <tbody>${summaryRows}</tbody></table>` : ''}
     <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
-      <button class="csv-btn-apply" onclick="applyCSVMapping()">Apply to Dashboard</button>
-      <span class="csv-analysis-note">Overwrites matching dashboard fields. Review values before running valuation.</span>
+      <button class="csv-btn-apply" onclick="applyCSVMapping()">Re-Apply to Dashboard</button>
+      <span class="csv-analysis-note">Fields were auto-filled on upload. Use this to re-apply after adjusting the mapping above.</span>
     </div>`;
   document.getElementById('csvResultsWrap').style.display = '';
 }
@@ -5373,21 +5375,40 @@ function applyCSVMapping() {
   }
 }
 
+function showCSVToast(msg, color) {
+  let t = document.getElementById('csvToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'csvToast';
+    t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border-2);border-radius:8px;padding:10px 20px;font-size:12px;font-family:var(--font);font-weight:600;color:#fff;z-index:2000;box-shadow:0 8px 32px rgba(0,0,0,.5);transition:opacity .3s;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.borderColor = color || 'var(--orange)';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
 function importCSVData() {
   if (!_csvFiles.length) { alert('Please select at least one CSV file.'); return; }
   const importType = document.getElementById('csvImportType').value;
-  const file = _csvFiles[0]; // process first file
+  const file = _csvFiles[0];
 
   const reader = new FileReader();
   reader.onload = e => {
-    const rows   = parseCSV(e.target.result);
-    const format = detectCSVFormat(rows);
-    const pairs  = extractMetricValuePairs(rows, format);
+    const rows    = parseCSV(e.target.result);
+    const format  = detectCSVFormat(rows);
+    const pairs   = extractMetricValuePairs(rows, format);
     const mapping = autoMapCSVFields(pairs, importType);
 
     _csvCurrentMapping = mapping;
     _csvCurrentPairs   = pairs;
 
+    // Auto-fill dashboard immediately
+    const applied = fillDashboardInputs(mapping);
+
+    // Show UI details
     const out = document.getElementById('csvOutput');
     out.style.display = '';
     renderCSVPreview(rows, format, file.name);
@@ -5395,6 +5416,9 @@ function importCSVData() {
     document.getElementById('csvMappingSection').style.display = '';
     renderMappingTable(mapping, pairs);
     renderImportResults(mapping, pairs);
+
+    // Toast confirmation
+    showCSVToast(`✓ ${applied} field${applied !== 1 ? 's' : ''} imported from ${file.name}`, 'var(--green)');
   };
   reader.readAsText(file);
 }
