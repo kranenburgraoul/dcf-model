@@ -1545,6 +1545,50 @@ td:last-child { border-right: none; }
   color: var(--text-dim);
   line-height: 1.6;
 }
+.guide-prompt-wrap {
+  position: relative;
+  margin-top: 8px;
+}
+.guide-prompt-box {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0a0f1a;
+  border: 1px solid var(--border-2);
+  border-radius: 7px;
+  padding: 14px 14px 42px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: #c8d4e8;
+  resize: none;
+  white-space: pre-wrap;
+  min-height: 220px;
+  outline: none;
+  cursor: text;
+  overflow-y: auto;
+}
+.guide-copy-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--orange);
+  color: #000;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  letter-spacing: .2px;
+}
+.guide-copy-btn:hover { background: var(--orange-dim); }
+.guide-copy-btn:active { transform: scale(0.97); }
+.guide-copy-btn svg { width: 12px; height: 12px; }
 
 /* ─── Print / PDF ─────────────────────────────────────────────────────── */
 @media print {
@@ -5829,6 +5873,18 @@ function closeDataGuide() {
   document.getElementById('dataGuideOverlay').classList.remove('open');
   document.body.style.overflow = '';
 }
+function copyAIPrompt() {
+  const box = document.getElementById('aiPromptBox');
+  const btn = document.getElementById('guideCopyBtn');
+  navigator.clipboard.writeText(box.value).then(() => {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => {
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Prompt';
+      btn.style.background = '';
+    }, 2000);
+  });
+}
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGuide(); });
 </script>
 
@@ -5919,6 +5975,53 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGui
             <tr><td>FRED (St. Louis Fed)</td><td>Current 10-year Treasury yield (risk-free rate)</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- AI Prompt -->
+      <div class="guide-section">
+        <div class="guide-section-title">AI Prompt — Collect All Data Instantly</div>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;line-height:1.6">
+          Copy this prompt and paste it into ChatGPT, Claude, Gemini, or any AI assistant. Replace <strong>[COMPANY]</strong> with the company name or ticker, then paste the response into the CSV Import section above.
+        </p>
+        <div class="guide-prompt-wrap">
+          <textarea class="guide-prompt-box" id="aiPromptBox" readonly>I'm building a DCF valuation model and need the following data for [COMPANY]. Please provide the most recent available figures. Use millions (M) for monetary values unless stated otherwise.
+
+--- COMPANY INFO ---
+- Full company name
+- Stock ticker and exchange
+- Current stock price (USD)
+- Diluted shares outstanding (M)
+- Net debt = Total Debt − Cash & Equivalents (M)
+
+--- INCOME STATEMENT (most recent full fiscal year) ---
+- Total Revenue (M)
+- EBIT / Operating Income (M)
+- Depreciation & Amortization (M)
+- Effective Tax Rate (%)
+
+--- CASH FLOW STATEMENT (most recent full fiscal year) ---
+- Capital Expenditures / CapEx (M, as a positive number)
+- Change in Net Working Capital (M, positive = cash outflow)
+
+--- WACC INPUTS ---
+- Current 10-year US Treasury yield / Risk-Free Rate (%)
+- 5-year monthly Beta vs. S&P 500
+- Equity Risk Premium — use Damodaran's current estimate for the US (%)
+- Estimated credit spread based on credit rating (%)
+- Debt ratio = Total Debt / (Total Debt + Market Cap) (%)
+
+--- FORECAST ASSUMPTIONS ---
+- Consensus analyst revenue growth estimate for next year, Year 1 (%)
+- Average consensus revenue growth estimate for years 2–5 (%)
+- Historical or forward EBIT margin estimate (%)
+- Long-term terminal growth rate — typically GDP growth ~2–3% (%)
+
+Please format your response as a simple table with two columns: Field | Value. Include units in the value column.</textarea>
+          <button class="guide-copy-btn" id="guideCopyBtn" onclick="copyAIPrompt()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy Prompt
+          </button>
+        </div>
       </div>
 
       <div class="guide-tip">
