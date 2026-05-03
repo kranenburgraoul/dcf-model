@@ -1406,6 +1406,146 @@ td:last-child { border-right: none; }
 .btn-export:active { transform: scale(0.98); }
 .btn-export svg { width: 13px; height: 13px; flex-shrink: 0; }
 
+/* ─── Data Guide Modal ────────────────────────────────────────────────── */
+.guide-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+.guide-overlay.open { display: flex; }
+.guide-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 760px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.guide-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+.guide-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  font-family: var(--font);
+}
+.guide-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color .15s, background .15s;
+}
+.guide-close:hover { color: var(--text); background: var(--border); }
+.guide-body { padding: 20px 24px 28px; }
+.guide-intro {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--orange-bg);
+  border: 1px solid var(--orange-dim);
+  border-radius: 6px;
+}
+.guide-section {
+  margin-bottom: 20px;
+}
+.guide-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--orange);
+  font-family: var(--font);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guide-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.guide-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font);
+}
+.guide-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.45;
+}
+.guide-table tr:last-child td { border-bottom: none; }
+.guide-table td:first-child {
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  width: 40%;
+}
+.guide-table td:nth-child(2) {
+  color: var(--text-dim);
+}
+.guide-where {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--mono);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--orange);
+  white-space: nowrap;
+}
+.guide-tip {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border-left: 3px solid var(--orange);
+  border-radius: 0 6px 6px 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
 /* ─── Print / PDF ─────────────────────────────────────────────────────── */
 @media print {
   /* Remap all color tokens to print-safe values */
@@ -2299,6 +2439,12 @@ td:last-child { border-right: none; }
         All monetary inputs in <strong>millions USD</strong> — per-share values and % as displayed · Enter assumptions below and click Calculate
       </span>
       <div class="export-group">
+        <button class="btn-export" onclick="openDataGuide()" title="What data do I need?">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Data Guide
+        </button>
         <button class="btn-export" onclick="exportPDF()" aria-label="Print or save as PDF" title="Print / Save as PDF">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -5672,6 +5818,116 @@ function exportHTML() {
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
+
+
+/* ─── Data Guide ──────────────────────────────────────────────────────── */
+function openDataGuide() {
+  document.getElementById('dataGuideOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDataGuide() {
+  document.getElementById('dataGuideOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGuide(); });
 </script>
+
+<!-- ─── Data Guide Modal ─────────────────────────────────────────────── -->
+<div class="guide-overlay" id="dataGuideOverlay" onclick="if(event.target===this)closeDataGuide()">
+  <div class="guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <div class="guide-modal-header">
+      <span class="guide-modal-title" id="guideTitle">Data Guide — What do I need?</span>
+      <button class="guide-close" onclick="closeDataGuide()" aria-label="Close">&times;</button>
+    </div>
+    <div class="guide-body">
+
+      <div class="guide-intro">
+        This dashboard runs a full DCF + WACC valuation. The table below shows every input, what it means, and where to find it.
+        Monetary values go in <strong>millions USD</strong>. Most data is available free on Yahoo Finance, Macrotrends, or the company's annual report (10-K).
+      </div>
+
+      <!-- Company -->
+      <div class="guide-section">
+        <div class="guide-section-title">01 · Company Information</div>
+        <table class="guide-table">
+          <thead><tr><th>Field</th><th>What it is &amp; where to find it</th></tr></thead>
+          <tbody>
+            <tr><td>Company Name</td><td>Full legal name of the company (e.g. Apple Inc.)</td></tr>
+            <tr><td>Ticker</td><td>Stock exchange symbol — e.g. AAPL, MSFT, AMZN</td></tr>
+            <tr><td>Current Stock Price</td><td>Today's share price. <span class="guide-where">Yahoo Finance → Quote</span></td></tr>
+            <tr><td>Shares Outstanding</td><td>Total diluted shares in millions. <span class="guide-where">Yahoo Finance → Statistics</span> or 10-K cover page.</td></tr>
+            <tr><td>Net Debt</td><td>Total debt minus cash &amp; equivalents (in M). <span class="guide-where">Balance sheet → Total Debt − Cash</span>. Can be negative (net cash).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Historical Financials -->
+      <div class="guide-section">
+        <div class="guide-section-title">02 · Historical Financials (most recent full year, in M)</div>
+        <table class="guide-table">
+          <thead><tr><th>Field</th><th>What it is &amp; where to find it</th></tr></thead>
+          <tbody>
+            <tr><td>Revenue</td><td>Total net revenue / sales. <span class="guide-where">Income statement → Revenue</span></td></tr>
+            <tr><td>EBIT</td><td>Earnings Before Interest &amp; Tax = Operating Income. <span class="guide-where">Income statement → Operating Income</span></td></tr>
+            <tr><td>D&amp;A</td><td>Depreciation &amp; Amortization. <span class="guide-where">Cash flow statement → D&amp;A</span> or income statement footnotes.</td></tr>
+            <tr><td>CapEx</td><td>Capital Expenditures (enter as positive). <span class="guide-where">Cash flow statement → Capital expenditures</span></td></tr>
+            <tr><td>Change in NWC</td><td>Increase in net working capital (positive = cash outflow). <span class="guide-where">Cash flow statement → Changes in working capital</span></td></tr>
+            <tr><td>Tax Rate (%)</td><td>Effective tax rate. <span class="guide-where">Income statement → Income tax / Pre-tax income</span>. Typical range 15–28%.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- WACC -->
+      <div class="guide-section">
+        <div class="guide-section-title">03 · WACC Inputs</div>
+        <table class="guide-table">
+          <thead><tr><th>Field</th><th>What it is &amp; where to find it</th></tr></thead>
+          <tbody>
+            <tr><td>Risk-Free Rate (%)</td><td>Yield on 10-year US Treasury. <span class="guide-where">finance.yahoo.com → ^TNX</span> or FRED. Typical: 4–5%.</td></tr>
+            <tr><td>Beta</td><td>Stock's sensitivity to market moves. <span class="guide-where">Yahoo Finance → Statistics → Beta (5Y monthly)</span>. Market = 1.0.</td></tr>
+            <tr><td>Equity Risk Premium (%)</td><td>Extra return demanded over risk-free. Use Damodaran's current ERP estimate. Typical: 4.5–6%.</td></tr>
+            <tr><td>Credit Spread (%)</td><td>Extra yield the company pays on debt vs. Treasuries. <span class="guide-where">Moody's / S&amp;P rating tables</span>, or estimate from interest expense ÷ total debt − risk-free rate.</td></tr>
+            <tr><td>Debt Ratio (%)</td><td>Debt as % of total capital (Debt ÷ (Debt + Equity)). <span class="guide-where">Balance sheet → Total Debt ÷ (Total Debt + Market Cap)</span>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Forecast -->
+      <div class="guide-section">
+        <div class="guide-section-title">04 · Forecast Assumptions</div>
+        <table class="guide-table">
+          <thead><tr><th>Field</th><th>What it is &amp; where to find it</th></tr></thead>
+          <tbody>
+            <tr><td>Revenue Growth Yr 1 (%)</td><td>Expected revenue growth next year. Use analyst consensus or your own estimate. <span class="guide-where">Yahoo Finance → Analysis → Revenue Estimate</span></td></tr>
+            <tr><td>Revenue Growth Yr 2–5 (%)</td><td>Average annual growth for years 2 through 5. Often company guidance or sector average.</td></tr>
+            <tr><td>EBIT Margin (%)</td><td>Target operating profit margin. Use historical average or analyst estimate. <span class="guide-where">Macrotrends → Operating Margin</span></td></tr>
+            <tr><td>Terminal Growth Rate (%)</td><td>Perpetuity growth rate after yr 10. Should not exceed long-run GDP growth (~2–3%). Conservative default: 2.5%.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sources -->
+      <div class="guide-section">
+        <div class="guide-section-title">Free Data Sources</div>
+        <table class="guide-table">
+          <thead><tr><th>Source</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td>Yahoo Finance</td><td>Price, shares, beta, income statement, cash flow</td></tr>
+            <tr><td>Macrotrends.net</td><td>10-year historical margins, revenue, CapEx charts</td></tr>
+            <tr><td>SEC EDGAR (10-K)</td><td>Full audited financials — most accurate source</td></tr>
+            <tr><td>Damodaran Online</td><td>ERP, betas by sector, country risk premiums</td></tr>
+            <tr><td>FRED (St. Louis Fed)</td><td>Current 10-year Treasury yield (risk-free rate)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="guide-tip">
+        <strong>Tip:</strong> Use the <strong>CSV Import</strong> section (top of page) to paste data exported from Yahoo Finance, Macrotrends, or any spreadsheet — the dashboard will auto-map the fields for you.
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
