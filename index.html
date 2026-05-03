@@ -1406,6 +1406,129 @@ td:last-child { border-right: none; }
 .btn-export:active { transform: scale(0.98); }
 .btn-export svg { width: 13px; height: 13px; flex-shrink: 0; }
 
+/* ─── DCF Audit Panel ─────────────────────────────────────────────────── */
+.dcf-warning {
+  display: none;
+  margin-top: 14px;
+  padding: 11px 16px;
+  background: rgba(251,191,36,.08);
+  border: 1px solid rgba(251,191,36,.35);
+  border-left: 3px solid var(--amber);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--amber);
+  line-height: 1.6;
+  font-family: var(--font);
+}
+.dcf-warning.error {
+  background: rgba(255,68,68,.07);
+  border-color: rgba(255,68,68,.3);
+  border-left-color: var(--red);
+  color: var(--red);
+}
+.dcf-warning.show { display: block; }
+.audit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font);
+  letter-spacing: .3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  margin-top: 14px;
+  transition: color .15s, border-color .15s;
+}
+.audit-toggle:hover { color: var(--orange); border-color: var(--orange); }
+.audit-toggle svg { width: 11px; height: 11px; transition: transform .2s; }
+.audit-toggle.open svg { transform: rotate(90deg); }
+.audit-panel {
+  display: none;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.audit-panel.show { display: block; }
+.audit-header {
+  padding: 9px 16px;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--orange);
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.audit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+.audit-cell {
+  padding: 10px 14px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font);
+}
+.audit-cell:nth-child(3n) { border-right: none; }
+.audit-cell-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: .3px;
+  margin-bottom: 3px;
+}
+.audit-cell-val {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text-primary);
+}
+.audit-cell-val.pos { color: var(--green); }
+.audit-cell-val.neg { color: var(--red); }
+.audit-cell-val.warn { color: var(--amber); }
+.audit-cell-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: var(--mono);
+}
+.audit-formula-row {
+  grid-column: 1 / -1;
+  padding: 7px 14px;
+  background: rgba(249,115,22,.04);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  letter-spacing: .2px;
+}
+.audit-warn-row {
+  grid-column: 1 / -1;
+  padding: 9px 14px;
+  background: rgba(251,191,36,.06);
+  border-bottom: 1px solid rgba(251,191,36,.2);
+  font-size: 11px;
+  color: var(--amber);
+  font-family: var(--font);
+  line-height: 1.5;
+}
+.audit-warn-row.err {
+  background: rgba(255,68,68,.06);
+  border-color: rgba(255,68,68,.2);
+  color: var(--red);
+}
+@media (max-width: 640px) { .audit-grid { grid-template-columns: repeat(2,1fr); } .audit-cell:nth-child(3n) { border-right: 1px solid var(--border); } .audit-cell:nth-child(2n) { border-right: none; } }
+
 /* ─── Tesla Test Modal ────────────────────────────────────────────────── */
 .test-overlay {
   display: none;
@@ -3035,7 +3158,7 @@ td:last-child { border-right: none; }
     <div class="kpi-card orange">
       <div class="kpi-label">Fair Value / Share</div>
       <div class="kpi-value orange" id="metricFV">—</div>
-      <div class="kpi-sub">Equity Value / Shares</div>
+      <div class="kpi-sub">Equity Value ÷ Shares (M)</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Current Share Price</div>
@@ -3048,6 +3171,29 @@ td:last-child { border-right: none; }
       <div class="kpi-sub" id="metricUDLabel">—</div>
     </div>
   </div>
+
+  <!-- Valuation warnings -->
+  <div style="padding:0 0 4px">
+    <div class="dcf-warning error" id="warnNegEV"></div>
+    <div class="dcf-warning error" id="warnNegFCFs"></div>
+    <div class="dcf-warning" id="warnNearCash"></div>
+  </div>
+
+  <!-- DCF Audit toggle -->
+  <div style="padding:0 0 16px">
+    <button class="audit-toggle" id="auditToggleBtn" onclick="toggleAuditPanel()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      DCF Calculation Audit
+    </button>
+    <div class="audit-panel" id="auditPanel">
+      <div class="audit-header">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        DCF Calculation Audit — Step-by-Step Verification
+      </div>
+      <div class="audit-grid" id="auditGrid"></div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ══ 8 · Sensitivity Analysis ══════════════════════════════════════════ -->
@@ -3097,7 +3243,7 @@ td:last-child { border-right: none; }
     <span class="section-tag">09</span>
     <span class="section-title">Scenario Analysis</span>
     <span class="section-rule"></span>
-    <span class="section-meta">Bear −30% Gr / −20% Mgn / +100bps WACC · Bull +30% Gr / +20% Mgn / −100bps WACC</span>
+    <span class="section-meta">Bear −30% Gr / −2pp EBIT Margin / +100bps WACC / +1pp CapEx · Bull +30% Gr / +2pp Margin / −100bps WACC / −1pp CapEx</span>
   </div>
 
   <div class="scenario-grid" style="margin-bottom:16px">
@@ -5855,11 +6001,21 @@ function runValuation() {
   const udCard = document.getElementById('kpi-ud');
   udCard.className = 'kpi-card ' + udCls;
 
+  /* DCF Audit Panel */
+  renderDCFAudit({
+    rows, dcf, wacc, tgr, fvps, netDebt, eqVal,
+    revenue: val('revenue'),
+    sharesOut: val('sharesOut'),
+    cash: val('cash'),
+    debt: val('debt'),
+  });
+
   /* Scenarios */
   const sc = calculateScenarios();
-  renderScenarioCard('bear', sc.bear, val('growthY1') * 0.7, val('ebitMargin') * 0.8);
-  renderScenarioCard('base', sc.base, val('growthY1'),       val('ebitMargin'));
-  renderScenarioCard('bull', sc.bull, val('growthY1') * 1.3, val('ebitMargin') * 1.2);
+  const baseM   = val('ebitMargin');
+  renderScenarioCard('bear', sc.bear, val('growthY1') * 0.7, Math.max(baseM - 2, 0.1));
+  renderScenarioCard('base', sc.base, val('growthY1'),        baseM);
+  renderScenarioCard('bull', sc.bull, val('growthY1') * 1.3,  baseM + 2);
 
   const stBody = document.getElementById('scenarioTableBody');
   stBody.innerHTML = [
@@ -5908,6 +6064,122 @@ function runValuation() {
   generateInvestmentChecklist({ fcf1, revenue: val('revenue'), wacc, tgr, fvps, updown, dcf, rows });
 }
 
+function toggleAuditPanel() {
+  const btn   = document.getElementById('auditToggleBtn');
+  const panel = document.getElementById('auditPanel');
+  const open  = panel.classList.toggle('show');
+  btn.classList.toggle('open', open);
+}
+
+function renderDCFAudit(params) {
+  const {
+    rows, dcf, wacc, tgr, fvps, netDebt, eqVal,
+    revenue, sharesOut, cash, debt,
+  } = params;
+
+  const fmt     = (v, d=0) => isNaN(v)||v===null ? '—' : v.toLocaleString('en-US',{maximumFractionDigits:d,minimumFractionDigits:d});
+  const fmtM    = v => isNaN(v)||v===null ? '—' : '$' + fmt(v, 0) + 'M';
+  const fmtPS   = v => isNaN(v)||v===null ? '—' : '$' + fmt(v, 2);
+  const fmtPct  = v => isNaN(v)||v===null ? '—' : (v*100).toFixed(2) + '%';
+  const cls     = v => v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+
+  const yr1     = rows[0];
+  const yrN     = rows[rows.length - 1];
+  const netCashPS = (cash - debt) / sharesOut;  // cash per share if net cash positive
+  const allNegFCF = rows.every(r => r.fcf < 0);
+  const someNegFCF= rows.some(r => r.fcf < 0);
+
+  // Warn: negative EV
+  const warnNegEV = document.getElementById('warnNegEV');
+  if (dcf.ev < 0) {
+    warnNegEV.textContent = `⚠ Enterprise Value is negative ($${fmt(dcf.ev,0)}M). The sum of discounted FCFs plus terminal value is below zero. The operating business has no positive DCF value at these assumptions.`;
+    warnNegEV.classList.add('show');
+  } else { warnNegEV.classList.remove('show'); }
+
+  // Warn: all FCFs negative
+  const warnNegFCFs = document.getElementById('warnNegFCFs');
+  if (allNegFCF) {
+    warnNegFCFs.textContent = `⚠ All forecast Free Cash Flows are negative. FCF = NOPAT + D&A − CapEx − ΔNWC. With the current EBIT margin (${(yr1.ebit/yr1.revenue*100).toFixed(1)}%), CapEx (${(yr1.capex/yr1.revenue*100).toFixed(1)}%), and D&A (${(yr1.da/yr1.revenue*100).toFixed(1)}%), the business consumes more cash than it generates. Set an "EBIT Margin Year 10 Target" in Section 4 to model margin expansion.`;
+    warnNegFCFs.classList.add('show');
+  } else { warnNegFCFs.classList.remove('show'); }
+
+  // Warn: FV ≈ net cash/share
+  const warnNearCash = document.getElementById('warnNearCash');
+  if (netCashPS !== 0 && Math.abs(fvps - netCashPS) / Math.abs(netCashPS) < 0.15) {
+    warnNearCash.textContent = `⚠ Fair value per share (${fmtPS(fvps)}) is close to net cash per share (${fmtPS(netCashPS)}). The operating business is being valued near zero by this DCF. Check EBIT margin, CapEx%, WACC, and terminal growth rate. If the company is expected to expand margins, set a higher "EBIT Margin Year 10 Target".`;
+    warnNearCash.classList.add('show');
+  } else { warnNearCash.classList.remove('show'); }
+
+  // Build audit cells
+  function cell(label, value, sub='', valCls='') {
+    return `<div class="audit-cell">
+      <div class="audit-cell-label">${label}</div>
+      <div class="audit-cell-val ${valCls}">${value}</div>
+      ${sub ? `<div class="audit-cell-sub">${sub}</div>` : ''}
+    </div>`;
+  }
+  function formulaRow(f) {
+    return `<div class="audit-formula-row">Formula: ${f}</div>`;
+  }
+  function warnRow(msg, isErr=false) {
+    return `<div class="audit-warn-row${isErr?' err':''}">${msg}</div>`;
+  }
+
+  let html = '';
+
+  // Revenue
+  html += formulaRow('Revenue Yr N = Revenue Yr N−1 × (1 + Growth Rate)');
+  html += cell('Base Revenue', fmtM(revenue), 'From Section 2 input');
+  html += cell('Revenue Year 1', fmtM(yr1.revenue), `Growth: ${(yr1.g*100).toFixed(1)}%`);
+  html += cell(`Revenue Year ${rows.length}`, fmtM(yrN.revenue), `Growth: ${(yrN.g*100).toFixed(1)}%`);
+
+  // FCF decomposition year 1
+  html += formulaRow('FCF = NOPAT + D&A − CapEx − ΔNWC · NOPAT = EBIT × (1 − Tax Rate) · EBIT = Revenue × EBIT Margin');
+  html += cell('EBIT Yr 1', fmtM(yr1.ebit), `${(yr1.ebit/yr1.revenue*100).toFixed(1)}% of revenue`, cls(yr1.ebit));
+  html += cell('NOPAT Yr 1', fmtM(yr1.nopat), `After-tax operating profit`, cls(yr1.nopat));
+  html += cell('D&A Yr 1', fmtM(yr1.da), `${(yr1.da/yr1.revenue*100).toFixed(1)}% of revenue`);
+  html += cell('CapEx Yr 1', fmtM(yr1.capex), `${(yr1.capex/yr1.revenue*100).toFixed(1)}% of revenue`);
+  html += cell('ΔNWC Yr 1', fmtM(yr1.dnwc), `${(yr1.dnwc/yr1.revenue*100).toFixed(1)}% of revenue`);
+  html += cell('FCF Year 1', fmtM(yr1.fcf), `PV: ${fmtM(yr1.pvFCF)}`, cls(yr1.fcf));
+
+  // FCF final year
+  html += cell(`FCF Year ${rows.length}`, fmtM(yrN.fcf), `PV: ${fmtM(yrN.pvFCF)}`, cls(yrN.fcf));
+  if (allNegFCF) html += warnRow('⚠ All FCFs negative — operating DCF = 0 or negative. Model margin expansion in Section 4.', true);
+  else if (someNegFCF) html += warnRow('⚠ Some early-year FCFs are negative. Check if margin expansion assumption is realistic.');
+
+  // DCF aggregates
+  html += formulaRow('EV = ∑PV(FCF) + PV(TV) · TV = FCF_N × (1+TGR) / (WACC−TGR) · PV(TV) = TV / (1+WACC)^N');
+  html += cell('∑ PV of FCFs', fmtM(dcf.sumPVFCF), `${rows.length}-year horizon`, cls(dcf.sumPVFCF));
+  html += cell('Terminal Value', fmtM(dcf.tv), `TGR=${fmtPct(tgr)} · WACC=${fmtPct(wacc)}`, cls(dcf.tv));
+  html += cell('PV Terminal Value', fmtM(dcf.pvTV), `${(dcf.tvPct||0).toFixed(1)}% of EV`, cls(dcf.pvTV));
+  if (dcf.ev < 0) html += warnRow('⚠ Enterprise Value is negative. Operating value is less than zero at these assumptions.', true);
+  html += cell('Enterprise Value', fmtM(dcf.ev), '∑PV(FCF) + PV(TV)', cls(dcf.ev));
+
+  // Bridge to equity
+  html += formulaRow('Equity Value = EV − Net Debt · Net Debt = Total Debt − Cash & Short-term Investments');
+  html += cell('Cash & Investments', fmtM(cash), 'From Section 1');
+  html += cell('Total Debt', fmtM(debt), 'From Section 1');
+  html += cell('Net Debt', fmtM(netDebt), netDebt < 0 ? 'Net Cash → adds to value' : 'Net Debt → reduces equity value', cls(-netDebt));
+
+  // Per share
+  html += formulaRow('Fair Value / Share = Equity Value (M) ÷ Shares Outstanding (M) — no × 1,000,000 needed (both in millions)');
+  html += cell('Equity Value', fmtM(eqVal), 'EV − Net Debt', cls(eqVal));
+  html += cell('Shares Outstanding', fmt(sharesOut, 0) + 'M', 'From Section 1');
+  html += cell('Fair Value / Share', fmtPS(fvps), `Net cash/share: ${fmtPS(netCashPS)}`, cls(fvps));
+
+  // Net cash comparison
+  if (Math.abs(netCashPS) > 0) {
+    const delta = ((fvps - netCashPS) / Math.abs(netCashPS) * 100);
+    const operatingVal = eqVal - (cash - debt);
+    html += cell('Operating Business Value', fmtM(operatingVal), 'Equity Value − Net Cash', cls(operatingVal));
+    html += cell('Net Cash / Share', fmtPS(netCashPS), 'Cash − Debt / Shares');
+    html += cell('Operating Value / Share', fmtPS(fvps - netCashPS), `${delta.toFixed(0)}% above net cash`, cls(fvps - netCashPS));
+  }
+
+  document.getElementById('auditGrid').innerHTML = html;
+  document.getElementById('auditToggleBtn').style.display = '';
+}
+
 function clearSummary() {
   ['metricEV','metricND','metricEQ','metricFV','metricUD'].forEach(id => {
     document.getElementById(id).textContent = '—';
@@ -5915,6 +6187,12 @@ function clearSummary() {
   document.getElementById('metricUDLabel').textContent = '—';
   document.getElementById('tv').textContent   = '—';
   document.getElementById('pvtv').textContent = '—';
+  ['warnNegEV','warnNegFCFs','warnNearCash'].forEach(id => {
+    document.getElementById(id)?.classList.remove('show');
+  });
+  document.getElementById('auditToggleBtn').style.display = 'none';
+  document.getElementById('auditPanel')?.classList.remove('show');
+  document.getElementById('auditToggleBtn')?.classList.remove('open');
 }
 
 /* ─── Live preview on input change ───────────────────────────────────── */
