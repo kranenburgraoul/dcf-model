@@ -2817,8 +2817,13 @@ td:last-child { border-right: none; }
           <input class="field-input" type="number" id="growthLT" value="8" step="0.1">
         </div>
         <div class="field">
-          <label class="field-label" for="ebitMargin">EBIT Margin (%)</label>
+          <label class="field-label" for="ebitMargin">EBIT Margin — Year 1 (%)</label>
           <input class="field-input" type="number" id="ebitMargin" value="12" step="0.1">
+        </div>
+        <div class="field">
+          <label class="field-label" for="ebitMarginTarget">EBIT Margin — Year 10 Target (%)</label>
+          <input class="field-input" type="number" id="ebitMarginTarget" step="0.1" placeholder="Same as Year 1">
+          <span class="field-hint">Optional · model expands margin linearly to this target</span>
         </div>
         <div class="field">
           <label class="field-label" for="daPct">D&amp;A as % of Revenue</label>
@@ -3727,6 +3732,14 @@ function calculateWACC(ov = {}) {
   return { ke, kdAt, wE, wD, wacc };
 }
 
+/* Read optional numeric input — returns null if blank/zero/NaN */
+function valOpt(id) {
+  const el = document.getElementById(id);
+  if (!el || el.value === '') return null;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? null : v;
+}
+
 /* ─── Forecast ────────────────────────────────────────────────────────── */
 function generateForecast(baseRevenue, wacc, ov = {}) {
   const yrs     = Math.min(Math.max(Math.round(val('forecastYrs', 10)), 1), 20);
@@ -3737,20 +3750,31 @@ function generateForecast(baseRevenue, wacc, ov = {}) {
     (ov.growthY4 ?? val('growthY4', 14)) / 100,
     (ov.growthY5 ?? val('growthY5', 12)) / 100,
   ];
-  const growthLT = (ov.growthLT   ?? val('growthLT', 8))     / 100;
-  const ebitM    = (ov.ebitMargin ?? val('ebitMargin', 12))   / 100;
-  const daPct    = (ov.daPct      ?? val('daPct', 6.1))       / 100;
-  const capexPct = (ov.capexPct   ?? val('capexPct', 9.0))    / 100;
-  const nwcPct   = (ov.nwcPct     ?? val('nwcPct', 1.3))      / 100;
-  const tax      = (ov.tax        ?? val('taxRate', 21))       / 100;
+  const growthLT = (ov.growthLT   ?? val('growthLT', 8))   / 100;
+  const ebitM    = (ov.ebitMargin ?? val('ebitMargin', 12)) / 100;
+  const daPct    = (ov.daPct      ?? val('daPct', 6.1))     / 100;
+  const capexPct = (ov.capexPct   ?? val('capexPct', 9.0))  / 100;
+  const nwcPct   = (ov.nwcPct     ?? val('nwcPct', 1.3))    / 100;
+  const tax      = (ov.tax        ?? val('taxRate', 21))     / 100;
+
+  // Margin expansion: interpolate from ebitM (yr 1) to ebitMTarget (yr N)
+  const rawTarget = ov.ebitMarginTarget !== undefined
+    ? ov.ebitMarginTarget
+    : valOpt('ebitMarginTarget');
+  const ebitMTarget = rawTarget !== null ? rawTarget / 100 : ebitM;
 
   const rows = [];
   let revenue = baseRevenue;
 
   for (let yr = 1; yr <= yrs; yr++) {
-    const g     = yr <= 5 ? growthY[yr - 1] : growthLT;
-    revenue     = revenue * (1 + g);
-    const ebit  = revenue * ebitM;
+    const g = yr <= 5 ? growthY[yr - 1] : growthLT;
+    revenue  = revenue * (1 + g);
+
+    // Linear margin interpolation yr1→yrN
+    const t       = yrs > 1 ? (yr - 1) / (yrs - 1) : 0;
+    const margin  = ebitM + t * (ebitMTarget - ebitM);
+
+    const ebit  = revenue * margin;
     const nopat = ebit * (1 - tax);
     const da    = revenue * daPct;
     const capex = revenue * capexPct;
@@ -3795,6 +3819,9 @@ function runScenario(ov = {}) {
 function calculateScenarios() {
   const base = runScenario();
 
+  const baseMargin   = val('ebitMargin');
+  const baseTarget   = valOpt('ebitMarginTarget') ?? baseMargin;
+
   const bear = runScenario({
     growthY1: val('growthY1') * 0.7,
     growthY2: val('growthY2') * 0.7,
@@ -3802,7 +3829,9 @@ function calculateScenarios() {
     growthY4: val('growthY4') * 0.7,
     growthY5: val('growthY5') * 0.7,
     growthLT: val('growthLT') * 0.7,
-    ebitMargin: val('ebitMargin') * 0.8,
+    ebitMargin:       Math.max(baseMargin  - 2, 0.1),
+    ebitMarginTarget: Math.max(baseTarget  - 3, 0.1),
+    capexPct: val('capexPct') + 1,
     rfr: val('rfr') + 1,
     tgr: Math.max(val('tgr') - 0.5, 0.1),
   });
@@ -3814,7 +3843,9 @@ function calculateScenarios() {
     growthY4: val('growthY4') * 1.3,
     growthY5: val('growthY5') * 1.3,
     growthLT: val('growthLT') * 1.3,
-    ebitMargin: val('ebitMargin') * 1.2,
+    ebitMargin:       baseMargin  + 2,
+    ebitMarginTarget: baseTarget  + 4,
+    capexPct: Math.max(val('capexPct') - 1, 0),
     rfr: Math.max(val('rfr') - 1, 0.01),
     tgr: val('tgr') + 0.5,
   });
@@ -4211,6 +4242,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* Initialize all quality score sliders */
   MQ_FACTORS.forEach(f => updateMqSlider(f.id));
+
+  /* ── Auto-sync historical → forecast % ── */
+  function syncHistoricalPcts() {
+    const rev = val('revenue');
+    if (rev <= 0) return;
+    const fields = [
+      ['da',    'daPct'],
+      ['capex', 'capexPct'],
+      ['nwc',   'nwcPct'],
+    ];
+    fields.forEach(([absId, pctId]) => {
+      const absEl = document.getElementById(absId);
+      const pctEl = document.getElementById(pctId);
+      if (absEl && pctEl && absEl.value !== '') {
+        pctEl.value = (val(absId) / rev * 100).toFixed(1);
+      }
+    });
+    // Also sync EBIT margin from ebit / revenue
+    const ebitEl   = document.getElementById('ebit');
+    const marginEl = document.getElementById('ebitMargin');
+    if (ebitEl && marginEl && ebitEl.value !== '') {
+      marginEl.value = (val('ebit') / rev * 100).toFixed(1);
+    }
+  }
+  ['revenue','da','capex','nwc','ebit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', syncHistoricalPcts);
+  });
 
   /* ── CSV drag-and-drop ── */
   const dropZone  = document.getElementById('csvDropZone');
