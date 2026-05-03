@@ -1529,7 +1529,7 @@ td:last-child { border-right: none; }
 }
 @media (max-width: 640px) { .audit-grid { grid-template-columns: repeat(2,1fr); } .audit-cell:nth-child(3n) { border-right: 1px solid var(--border); } .audit-cell:nth-child(2n) { border-right: none; } }
 
-/* ─── Tesla Test Modal ────────────────────────────────────────────────── */
+/* ─── Apple Test Modal ────────────────────────────────────────────────── */
 .test-overlay {
   display: none;
   position: fixed;
@@ -2669,11 +2669,11 @@ td:last-child { border-right: none; }
         All monetary inputs in <strong>millions USD</strong> — per-share values and % as displayed · Enter assumptions below and click Calculate
       </span>
       <div class="export-group">
-        <button class="btn-export" onclick="runTeslaTest()" title="Fill Tesla test case and validate calculations" style="border-color:rgba(239,68,68,.4);color:var(--red)">
+        <button class="btn-export" onclick="runAppleTest()" title="Fill Apple FY2024 test case and validate calculations" style="border-color:rgba(99,179,237,.4);color:var(--blue)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
-          Test: Tesla
+          Test: Apple
         </button>
         <button class="btn-export" onclick="openDataGuide()" title="What data do I need?">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -6607,14 +6607,14 @@ function exportHTML() {
 }
 
 
-/* ─── Tesla Test Case ─────────────────────────────────────────────────── */
-function runTeslaTest() {
-  // 1) Fill all inputs
+/* ─── Apple Test Case ─────────────────────────────────────────────────── */
+function runAppleTest() {
+  // 1) Fill all inputs with Apple FY2024 data
   const vals = {
-    company:'Tesla', ticker:'TSLA', sharePrice:390, sharesOut:3528,
-    cash:44059, debt:8376, taxRate:21,
-    revenue:94827, ebit:4355, ocf:14747, capex:8527, da:5127, nwc:1000,
-    rfr:4.5, erp:5.5, beta:2.0, cod:5.5, mvd:8376,
+    companyName:'Apple Inc.', ticker:'AAPL', sharePrice:280.14, sharesOut:14680,
+    cash:156650, debt:106629, taxRate:24.1,
+    revenue:391035, ebit:123216, ocf:118254, capex:9447, da:11445, nwc:-3651,
+    rfr:4.5, erp:5.5, beta:1.11, cod:4.5, mvd:106629,
   };
   Object.entries(vals).forEach(([id, v]) => {
     const el = document.getElementById(id);
@@ -6626,14 +6626,23 @@ function runTeslaTest() {
   const mveEl = document.getElementById('mve');
   if (mveEl) { mveEl.readOnly = true; mveEl.style.opacity = '0.7'; }
   if (typeof syncMVE === 'function') syncMVE();
-  else if (mveEl) mveEl.value = Math.round(390 * 3528);
+  else if (mveEl) mveEl.value = Math.round(280.14 * 14680);
   if (typeof syncHistoricalPcts === 'function') syncHistoricalPcts();
 
   // 2) Run checks
+  // Expected values (hand-calculated):
+  //   MVE = 280.14 × 14680 = 4,112,455
+  //   Net Debt = 106629 − 156650 = −50,021
+  //   FCF (OCF − CapEx) = 118254 − 9447 = 108,807
+  //   Ke = 4.5 + 1.11 × 5.5 = 10.605%
+  //   Kd(1−t) = 4.5 × (1 − 0.241) = 3.416%
+  //   wE = 4112455 / 4219084 = 97.47%
+  //   wD = 106629 / 4219084 = 2.53%
+  //   WACC ≈ 10.42%
   const mveActual  = parseFloat(document.getElementById('mve')?.value || 0);
-  const cashV      = 44059, debtV = 8376;
+  const cashV      = 156650, debtV = 106629;
   const netDebtAct = debtV - cashV;
-  const fcf1Act    = 14747 - 8527;
+  const fcf1Act    = 118254 - 9447;
   const { ke, kdAt, wE, wD, wacc } = calculateWACC();
   const keActPct   = ke   * 100;
   const kdAtPct    = kdAt * 100;
@@ -6645,58 +6654,58 @@ function runTeslaTest() {
   const checks = [
     {
       name: 'Market Value of Equity ($M)',
-      expected: 1375920,
+      expected: 4112455,
       actual: mveActual,
-      pass: tol(mveActual, 1375920, 1),
+      pass: tol(mveActual, 4112455, 2),
       fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
     },
     {
       name: 'Net Debt ($M)',
-      expected: -35683,
+      expected: -50021,
       actual: netDebtAct,
-      pass: tol(netDebtAct, -35683, 1),
+      pass: tol(netDebtAct, -50021, 1),
       fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
     },
     {
       name: 'FCF Method 1 — OCF − CapEx ($M)',
-      expected: 6220,
+      expected: 108807,
       actual: fcf1Act,
-      pass: tol(fcf1Act, 6220, 1),
+      pass: tol(fcf1Act, 108807, 1),
       fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
     },
     {
       name: 'Cost of Equity — Ke (%)',
-      expected: 15.5,
+      expected: 10.605,
       actual: keActPct,
-      pass: tol(keActPct, 15.5, 0.05),
-      fmt: v => v.toFixed(2) + '%',
+      pass: tol(keActPct, 10.605, 0.05),
+      fmt: v => v.toFixed(3) + '%',
     },
     {
       name: 'After-tax Cost of Debt — Kd(1−t) (%)',
-      expected: 4.345,
+      expected: 3.416,
       actual: kdAtPct,
-      pass: tol(kdAtPct, 4.345, 0.05),
+      pass: tol(kdAtPct, 3.416, 0.05),
       fmt: v => v.toFixed(3) + '%',
     },
     {
       name: 'Equity Weight — wE (%)',
-      expected: 99.39,
+      expected: 97.47,
       actual: wEPct,
-      pass: tol(wEPct, 99.39, 0.05),
+      pass: tol(wEPct, 97.47, 0.05),
       fmt: v => v.toFixed(2) + '%',
     },
     {
       name: 'Debt Weight — wD (%)',
-      expected: 0.61,
+      expected: 2.53,
       actual: wDPct,
-      pass: tol(wDPct, 0.61, 0.05),
+      pass: tol(wDPct, 2.53, 0.05),
       fmt: v => v.toFixed(2) + '%',
     },
     {
-      name: 'WACC (%) — expect ≈15.43%',
-      expected: 15.43,
+      name: 'WACC (%) — expect ≈10.42%',
+      expected: 10.42,
       actual: waccActPct,
-      pass: tol(waccActPct, 15.43, 0.1),
+      pass: tol(waccActPct, 10.42, 0.1),
       fmt: v => v.toFixed(2) + '%',
     },
   ];
@@ -6718,11 +6727,11 @@ function runTeslaTest() {
   document.getElementById('testSummary').className =
     `test-summary ${allPass ? 'all-pass' : 'has-fail'}`;
 
-  document.getElementById('teslaTestOverlay').classList.add('open');
+  document.getElementById('appleTestOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-function closeTeslaTest() {
-  document.getElementById('teslaTestOverlay').classList.remove('open');
+function closeAppleTest() {
+  document.getElementById('appleTestOverlay').classList.remove('open');
   document.body.style.overflow = '';
 }
 
@@ -6750,16 +6759,16 @@ function copyAIPrompt() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDataGuide(); });
 </script>
 
-<!-- ─── Tesla Test Modal ─────────────────────────────────────────────── -->
-<div class="test-overlay" id="teslaTestOverlay" onclick="if(event.target===this)closeTeslaTest()">
+<!-- ─── Apple Test Modal ──────────────────────────────────────────────── -->
+<div class="test-overlay" id="appleTestOverlay" onclick="if(event.target===this)closeAppleTest()">
   <div class="test-modal" role="dialog" aria-modal="true">
     <div class="test-modal-header">
-      <span class="test-modal-title">⚡ Tesla Test Case — Validation</span>
-      <button class="test-close" onclick="closeTeslaTest()" aria-label="Close">&times;</button>
+      <span class="test-modal-title">Apple Test Case — Validation</span>
+      <button class="test-close" onclick="closeAppleTest()" aria-label="Close">&times;</button>
     </div>
     <div class="test-body">
       <div class="test-desc">
-        Dashboard filled with Tesla 2023 inputs. The checks below verify that key computed values are correct.
+        Dashboard filled with Apple FY2024 inputs. The checks below verify that key computed values are correct.
         All inputs are now pre-loaded — click <strong>Calculate Valuation</strong> to run the full model.
       </div>
       <div id="testResultsBody"></div>
