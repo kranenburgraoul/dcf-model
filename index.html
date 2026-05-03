@@ -2975,6 +2975,22 @@ td:last-child { border-right: none; }
           </div>
         </div>
       </div>
+
+      <!-- WACC warnings -->
+      <div class="dcf-warning error" id="warnMVEZero"></div>
+      <div class="dcf-warning error" id="warnWACCHigh"></div>
+      <div class="dcf-warning" id="warnWACCLow"></div>
+      <div class="dcf-warning" id="warnKeHigh"></div>
+
+      <!-- WACC Breakdown toggle -->
+      <button class="audit-toggle" id="waccBreakdownBtn" onclick="toggleWACCPanel()">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,2 8,6 3,10"/></svg>
+        WACC Calculation Breakdown
+      </button>
+      <div class="audit-panel" id="waccPanel">
+        <div class="audit-header">WACC — INPUTS &amp; INTERMEDIATE STEPS</div>
+        <div class="audit-grid" id="waccGrid"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -3960,6 +3976,80 @@ function calculateWACC(ov = {}) {
   const wacc = ke * wE + kdAt * wD;
 
   return { ke, kdAt, wE, wD, wacc };
+}
+
+/* ─── WACC warnings & breakdown ──────────────────────────────────────── */
+function updateWACCWarnings(ke, wacc, mve) {
+  const show = (id, msg, isErr) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (msg) { el.textContent = msg; el.classList.add('show'); if (isErr) el.classList.add('error'); else el.classList.remove('error'); }
+    else      { el.textContent = ''; el.classList.remove('show'); }
+  };
+  const mveV = mve ?? val('mve', 0);
+  show('warnMVEZero',
+    mveV <= 0 ? '⚠ Market Value of Equity is zero or missing. WACC is unreliable — WACC defaults to 100% equity weighting.' : '',
+    true);
+  show('warnWACCHigh',
+    wacc > 0.15 ? `⚠ WACC of ${formatPct(wacc*100)} is high (>15%). Double-check Beta, ERP, and capital structure inputs. High WACC significantly compresses DCF value.` : '',
+    true);
+  show('warnWACCLow',
+    wacc > 0 && wacc < 0.05 ? `⚠ WACC of ${formatPct(wacc*100)} is unusually low (<5%). Verify risk-free rate and equity risk premium are entered as percentages (e.g. 4.5, not 0.045).` : '',
+    false);
+  show('warnKeHigh',
+    ke > 0.20 ? `⚠ Cost of Equity (Ke) of ${formatPct(ke*100)} exceeds 20%. Confirm Beta (${val('beta',1).toFixed(2)}) and ERP (${val('erp').toFixed(1)}%) are reasonable.` : '',
+    false);
+}
+
+function renderWACCBreakdown(ke, kdAt, wE, wD, wacc) {
+  const grid = document.getElementById('waccGrid');
+  if (!grid) return;
+  const rfr  = val('rfr');
+  const erp  = val('erp');
+  const beta = val('beta', 1);
+  const cod  = val('cod');
+  const tax  = val('taxRate');
+  const mve  = val('mve', 1);
+  const mvd  = val('mvd', 0);
+  const tot  = mve + mvd;
+
+  const cells = [
+    { label: 'Risk-free Rate (Rf)',     value: rfr.toFixed(2)  + '%',           formula: 'Input'                           },
+    { label: 'Equity Risk Premium',     value: erp.toFixed(2)  + '%',           formula: 'Input'                           },
+    { label: 'Beta (β)',                value: beta.toFixed(2),                  formula: 'Input'                           },
+    { label: 'Cost of Equity (Ke)',     value: formatPct(ke*100),                formula: 'Rf + β × ERP',                   highlight: true },
+    { label: 'Pre-tax Cost of Debt',    value: cod.toFixed(2)  + '%',           formula: 'Input'                           },
+    { label: 'Tax Rate',                value: tax.toFixed(1)  + '%',           formula: 'Input'                           },
+    { label: 'After-tax Cost of Debt',  value: formatPct(kdAt*100),              formula: 'Kd × (1 − Tax)',                 highlight: true },
+    { label: 'Market Value of Equity',  value: '$' + mve.toLocaleString('en-US',{maximumFractionDigits:0}) + 'M', formula: 'Input / Auto'  },
+    { label: 'Market Value of Debt',    value: '$' + mvd.toLocaleString('en-US',{maximumFractionDigits:0}) + 'M', formula: 'Input'         },
+    { label: 'Total Capital',           value: '$' + tot.toLocaleString('en-US',{maximumFractionDigits:0}) + 'M', formula: 'MVE + MVD'     },
+    { label: 'Equity Weight (wE)',       value: formatPct(wE*100),               formula: 'MVE / Total',                    highlight: true },
+    { label: 'Debt Weight (wD)',         value: formatPct(wD*100),               formula: 'MVD / Total',                    highlight: true },
+    { label: 'Ke × wE',                 value: formatPct(ke*wE*100),             formula: 'Equity contribution'             },
+    { label: 'Kd(1−t) × wD',           value: formatPct(kdAt*wD*100),           formula: 'Debt contribution'               },
+    { label: 'WACC',                    value: formatPct(wacc*100),              formula: 'Ke·wE + Kd(1−t)·wD',            highlight: true },
+  ];
+
+  grid.innerHTML = cells.map(c => `
+    <div class="audit-cell${c.highlight ? ' highlight' : ''}">
+      <div class="audit-cell-label">${c.label}</div>
+      <div class="audit-cell-value">${c.value}</div>
+      <div class="audit-cell-formula">${c.formula}</div>
+    </div>`).join('');
+}
+
+function toggleWACCPanel() {
+  const panel = document.getElementById('waccPanel');
+  const btn   = document.getElementById('waccBreakdownBtn');
+  if (!panel) return;
+  const opening = !panel.classList.contains('show');
+  panel.classList.toggle('show');
+  btn?.classList.toggle('open');
+  if (opening) {
+    const { ke, kdAt, wE, wD, wacc } = calculateWACC();
+    renderWACCBreakdown(ke, kdAt, wE, wD, wacc);
+  }
 }
 
 /* Read optional numeric input — returns null if blank/zero/NaN */
@@ -6204,6 +6294,10 @@ function livePreview() {
     document.getElementById('wE').textContent      = formatPct(wE   * 100);
     document.getElementById('wD').textContent      = formatPct(wD   * 100);
     document.getElementById('waccResult').textContent = formatPct(wacc * 100);
+    updateWACCWarnings(ke, wacc, null);
+    if (document.getElementById('waccPanel')?.classList.contains('show')) {
+      renderWACCBreakdown(ke, kdAt, wE, wD, wacc);
+    }
   } catch (_) {}
   try { syncBaseCasePlaceholders(); } catch (_) {}
   try {
@@ -6390,8 +6484,11 @@ function runTeslaTest() {
   const cashV      = 44059, debtV = 8376;
   const netDebtAct = debtV - cashV;
   const fcf1Act    = 14747 - 8527;
-  const { ke, wacc } = calculateWACC();
-  const keActPct   = ke * 100;
+  const { ke, kdAt, wE, wD, wacc } = calculateWACC();
+  const keActPct   = ke   * 100;
+  const kdAtPct    = kdAt * 100;
+  const wEPct      = wE   * 100;
+  const wDPct      = wD   * 100;
   const waccActPct = wacc * 100;
 
   const tol = (a, b, t) => Math.abs(a - b) <= t;
@@ -6418,17 +6515,38 @@ function runTeslaTest() {
       fmt: v => v.toLocaleString('en-US', {maximumFractionDigits:0}),
     },
     {
-      name: 'Cost of Equity (%)',
+      name: 'Cost of Equity — Ke (%)',
       expected: 15.5,
       actual: keActPct,
       pass: tol(keActPct, 15.5, 0.05),
       fmt: v => v.toFixed(2) + '%',
     },
     {
-      name: 'WACC (%) — expect ≈15.4%',
-      expected: 15.4,
+      name: 'After-tax Cost of Debt — Kd(1−t) (%)',
+      expected: 4.345,
+      actual: kdAtPct,
+      pass: tol(kdAtPct, 4.345, 0.05),
+      fmt: v => v.toFixed(3) + '%',
+    },
+    {
+      name: 'Equity Weight — wE (%)',
+      expected: 99.39,
+      actual: wEPct,
+      pass: tol(wEPct, 99.39, 0.05),
+      fmt: v => v.toFixed(2) + '%',
+    },
+    {
+      name: 'Debt Weight — wD (%)',
+      expected: 0.61,
+      actual: wDPct,
+      pass: tol(wDPct, 0.61, 0.05),
+      fmt: v => v.toFixed(2) + '%',
+    },
+    {
+      name: 'WACC (%) — expect ≈15.43%',
+      expected: 15.43,
       actual: waccActPct,
-      pass: tol(waccActPct, 15.4, 0.2),
+      pass: tol(waccActPct, 15.43, 0.1),
       fmt: v => v.toFixed(2) + '%',
     },
   ];
